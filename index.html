@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>NetSim</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Nunito:wght@700;800;900&display=swap');
+
+:root{
+  --black:#0a0a0a;
+  --white:#fffef5;
+  --yellow:#FFE134;
+  --orange:#FF6B1A;
+  --cyan:#00E5D1;
+  --pink:#FF3D9A;
+  --green:#2EFF8B;
+  --purple:#B14EFF;
+  --border:3px solid var(--black);
+  --shadow:4px 4px 0 var(--black);
+  --shadow-lg:6px 6px 0 var(--black);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Space Mono',monospace;font-size:12px;background:var(--white);color:var(--black);user-select:none}
+#app{display:flex;flex-direction:column;height:100vh;min-height:560px}
+
+/* TOPBAR */
+#topbar{
+  background:var(--yellow);
+  border-bottom:var(--border);
+  padding:6px 10px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+#topbar .title{
+  font-family:'Nunito',sans-serif;
+  font-size:16px;font-weight:900;
+  color:var(--black);
+  margin-right:8px;
+  letter-spacing:-0.5px;
+  text-transform:uppercase;
+}
+.btn{
+  padding:4px 10px;
+  border:2.5px solid var(--black);
+  border-radius:0;
+  cursor:pointer;
+  font-size:10px;
+  font-family:'Space Mono',monospace;
+  font-weight:700;
+  background:var(--white);
+  color:var(--black);
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  text-transform:uppercase;
+}
+.btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--black)}
+.btn.on{background:var(--cyan);color:var(--black);border-color:var(--black)}
+.btn-sim{
+  background:var(--green);
+  border-color:var(--black);
+  color:var(--black);
+  font-weight:900;
+  box-shadow:4px 4px 0 var(--black);
+}
+.btn-sim:hover{background:#00cc6e;transform:translate(1px,1px);box-shadow:3px 3px 0 var(--black)}
+.btn-tour{
+  background:var(--pink);
+  border-color:var(--black);
+  color:var(--white);
+  font-weight:900;
+  box-shadow:4px 4px 0 var(--black);
+  animation:pulse-tour 2s ease-in-out infinite;
+}
+.btn-tour:hover{background:#e0008a;transform:translate(1px,1px);box-shadow:3px 3px 0 var(--black)}
+@keyframes pulse-tour{0%,100%{box-shadow:4px 4px 0 var(--black)}50%{box-shadow:4px 4px 0 var(--black),0 0 12px var(--pink)}}
+.sep{width:2px;height:22px;background:var(--black);margin:0 2px}
+
+/* CABLE BAR */
+#cable-bar{
+  background:#FFD6E7;
+  border-bottom:var(--border);
+  padding:5px 10px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.ctype{
+  padding:3px 10px;
+  border:2.5px solid var(--black);
+  border-radius:0;
+  cursor:pointer;
+  font-size:10px;
+  font-family:'Space Mono',monospace;
+  font-weight:700;
+  background:var(--white);
+  color:var(--black);
+  display:flex;align-items:center;gap:5px;
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  text-transform:uppercase;
+}
+.ctype:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+.ctype.on{background:var(--orange);color:var(--white);border-color:var(--black)}
+.cline{width:28px;height:3px;border-radius:0}
+
+/* MAIN */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{
+  width:80px;
+  background:#E8F4FF;
+  border-right:var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 4px;gap:5px;overflow-y:auto;
+}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-thumb{background:var(--black)}
+.dev-btn{
+  width:66px;padding:5px 2px;
+  border:2.5px solid var(--black);
+  border-radius:0;
+  cursor:pointer;
+  background:var(--white);
+  color:var(--black);
+  text-align:center;
+  font-size:9px;
+  font-family:'Space Mono',monospace;
+  font-weight:700;
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  text-transform:uppercase;
+}
+.dev-btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+.dev-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--black)}
+.dev-btn.on{background:var(--yellow);border-color:var(--black)}
+.dev-btn canvas{display:block;margin:0 auto 3px}
+
+/* CANVAS */
+#canvas-wrap{
+  flex:1;position:relative;overflow:hidden;
+  background:var(--white);
+  cursor:crosshair;
+  background-image:
+    linear-gradient(var(--black) 1px,transparent 1px),
+    linear-gradient(90deg,var(--black) 1px,transparent 1px);
+  background-size:30px 30px;
+  background-color:var(--white);
+  background-position:0 0;
+  opacity:1;
+}
+/* grid overlay using pseudo via canvas bg */
+#canvas-wrap::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,0.06) 1px,transparent 1px);
+  background-size:30px 30px;
+  pointer-events:none;z-index:0;
+}
+canvas#c{position:absolute;top:0;left:0;z-index:1}
+
+/* INFO BAR */
+#info-bar{
+  background:var(--black);
+  border-top:var(--border);
+  padding:4px 10px;
+  font-size:10px;color:var(--yellow);
+  display:flex;gap:16px;
+  font-family:'Space Mono',monospace;
+}
+#info-bar span{color:#aaa}
+#info-bar span:first-child{color:var(--yellow)}
+
+/* TOOLTIP */
+#tooltip{
+  position:absolute;
+  background:var(--black);
+  border:2px solid var(--yellow);
+  border-radius:0;
+  padding:4px 10px;
+  font-size:10px;color:var(--yellow);
+  font-family:'Space Mono',monospace;
+  pointer-events:none;display:none;z-index:10;
+  box-shadow:3px 3px 0 var(--yellow);
+}
+
+/* ============ SIMULATION PANEL ============ */
+#sim-panel{
+  position:absolute;top:0;right:0;width:340px;height:100%;
+  background:var(--white);
+  border-left:var(--border);
+  display:flex;flex-direction:column;
+  z-index:20;transform:translateX(100%);
+  transition:transform 0.2s cubic-bezier(.22,.61,.36,1);
+  overflow:hidden;
+}
+#sim-panel.open{transform:translateX(0)}
+#sim-header{
+  background:var(--cyan);
+  border-bottom:var(--border);
+  padding:10px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#sim-header h3{
+  font-family:'Nunito',sans-serif;
+  font-size:14px;color:var(--black);font-weight:900;
+  text-transform:uppercase;
+}
+#sim-close{
+  background:var(--black);border:none;color:var(--white);
+  cursor:pointer;font-size:14px;padding:2px 8px;
+  font-weight:700;transition:background .1s;
+}
+#sim-close:hover{background:#333}
+#sim-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+#sim-body::-webkit-scrollbar{width:5px}
+#sim-body::-webkit-scrollbar-track{background:var(--white)}
+#sim-body::-webkit-scrollbar-thumb{background:var(--black)}
+
+.sim-section{border:2.5px solid var(--black);overflow:hidden;box-shadow:4px 4px 0 var(--black)}
+.sim-section-title{
+  background:var(--black);padding:6px 10px;
+  font-size:10px;font-weight:700;color:var(--yellow);
+  text-transform:uppercase;letter-spacing:.5px;
+  display:flex;align-items:center;gap:6px;
+  font-family:'Space Mono',monospace;
+}
+.sim-section-body{
+  padding:8px 10px;display:flex;flex-direction:column;gap:5px;
+  background:var(--white);
+}
+
+.sim-badge{
+  display:inline-block;padding:2px 8px;
+  font-size:10px;font-weight:700;
+  border:2px solid var(--black);
+  font-family:'Space Mono',monospace;
+}
+.badge-ok{background:var(--green);color:var(--black)}
+.badge-warn{background:var(--yellow);color:var(--black)}
+.badge-err{background:var(--pink);color:var(--white)}
+.badge-info{background:var(--cyan);color:var(--black)}
+
+.sim-item{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:11px;color:var(--black);padding:5px 0;
+  border-bottom:1.5px solid #e0e0e0;
+}
+.sim-item:last-child{border-bottom:none}
+.sim-icon{font-size:13px;flex-shrink:0}
+.sim-text{flex:1;line-height:1.4}
+.sim-text strong{color:var(--black);display:block;font-size:11px;font-weight:700}
+.sim-text span{color:#444;font-size:10px}
+
+.sim-summary{
+  background:var(--yellow);
+  border:2.5px solid var(--black);
+  box-shadow:4px 4px 0 var(--black);
+  padding:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.sim-summary-score{
+  font-size:32px;font-weight:900;
+  font-family:'Nunito',sans-serif;
+  line-height:1;
+  border:3px solid var(--black);
+  padding:4px 10px;
+  background:var(--white);
+}
+.score-ok{color:#007a3d}
+.score-warn{color:#cc7a00}
+.score-err{color:#cc0033}
+.sim-summary-meta{flex:1}
+.sim-summary-meta .topo-name{
+  font-size:13px;font-weight:900;
+  font-family:'Nunito',sans-serif;
+  color:var(--black);margin-bottom:3px;
+}
+.sim-summary-meta .topo-desc{font-size:10px;color:#333;line-height:1.4}
+
+#sim-loading{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:30px;text-align:center;
+}
+#sim-loading.active{display:flex}
+.spinner{
+  width:36px;height:36px;
+  border:4px solid var(--black);
+  border-top-color:var(--cyan);
+  border-radius:50%;
+  animation:spin .6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#sim-loading p{color:var(--black);font-size:11px;line-height:1.5;font-weight:700}
+
+#sim-result{display:flex;flex-direction:column;gap:8px}
+#sim-result.hidden{display:none}
+
+#sim-ai-bar{
+  border-top:var(--border);padding:8px 10px;
+  background:var(--black);
+}
+#sim-ai-bar p{font-size:9px;color:#aaa;text-align:center}
+
+/* ============ GUIDED TOUR ============ */
+#tour-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:1000;
+  display:none;
+  pointer-events:none;
+}
+#tour-overlay.active{display:block}
+
+#tour-spotlight{
+  position:fixed;
+  pointer-events:none;
+  z-index:1001;
+  transition:all .35s cubic-bezier(.22,.61,.36,1);
+  outline:4px dashed var(--yellow);
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.72);
+  border:none;
+}
+
+#tour-card{
+  position:fixed;
+  z-index:1002;
+  background:var(--yellow);
+  border:3px solid var(--black);
+  box-shadow:var(--shadow-lg);
+  padding:16px 18px;
+  width:290px;
+  pointer-events:all;
+  transition:all .3s cubic-bezier(.22,.61,.36,1);
+}
+#tour-card h4{
+  font-family:'Nunito',sans-serif;
+  font-size:16px;font-weight:900;
+  color:var(--black);margin-bottom:6px;
+  text-transform:uppercase;
+}
+#tour-card p{
+  font-size:11px;color:#222;line-height:1.6;margin-bottom:12px;
+}
+#tour-card .tour-step-count{
+  font-size:9px;color:#555;font-weight:700;margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:1px;
+}
+#tour-card .tour-btns{display:flex;gap:8px;align-items:center}
+#tour-card .tour-btns button{
+  padding:5px 14px;
+  border:2.5px solid var(--black);
+  font-family:'Space Mono',monospace;
+  font-size:10px;font-weight:700;
+  cursor:pointer;
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  text-transform:uppercase;
+}
+#tour-card .tour-btns button:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+#tour-next{background:var(--black);color:var(--yellow)}
+#tour-prev{background:var(--white);color:var(--black)}
+#tour-skip{background:none;border:none!important;box-shadow:none!important;color:#666;font-size:10px;margin-left:auto;cursor:pointer;font-family:'Space Mono',monospace;text-decoration:underline}
+#tour-skip:hover{color:var(--black);transform:none!important}
+
+#tour-action{
+  background:var(--orange);
+  color:var(--white);
+  border:2.5px solid var(--black);
+  padding:4px 12px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;font-weight:700;
+  cursor:pointer;
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  text-transform:uppercase;
+}
+#tour-action:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+
+#tour-progress{
+  display:flex;gap:5px;margin-bottom:10px;
+}
+.tour-dot{
+  width:8px;height:8px;
+  border:2px solid var(--black);
+  background:var(--white);
+  transition:background .2s;
+}
+.tour-dot.active{background:var(--black)}
+
+@keyframes none{}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="topbar">
+  <span class="title">⬡ NetSim</span>
+  <button class="btn" id="btn-select" onclick="setMode('select',this)">▶ Pilih</button>
+  <button class="btn on" id="btn-cable" onclick="setMode('cable',this)">⏤ Kabel</button>
+  <button class="btn" id="btn-del" onclick="deleteSelected()">✕ Hapus</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="clearAll()">↺ Reset</button>
+  <button class="btn" onclick="loadDemo('star')">★ Bintang</button>
+  <button class="btn" onclick="loadDemo('bus')">≡ Bus</button>
+  <button class="btn" onclick="loadDemo('ring')">◯ Ring</button>
+  <button class="btn" onclick="loadDemo('mesh')">⬡ Mesh</button>
+  <div class="sep"></div>
+  <span style="color:#007a3d;font-size:9px;font-weight:700;font-family:'Space Mono',monospace">● AI AKTIF</span>
+  <div class="sep"></div>
+  <button class="btn btn-tour" onclick="startTour()">? PANDUAN</button>
+  <button class="btn btn-sim" onclick="runSimulation()">▶▶ SIMULASI</button>
+</div>
+<div id="cable-bar">
+  <span style="color:var(--black);font-size:9px;font-weight:700;font-family:'Space Mono',monospace;margin-right:2px;text-transform:uppercase">Kabel:</span>
+  <div class="ctype on" id="ct-straight" onclick="setCable('straight',this)">
+    <div class="cline" style="background:#4fc3f7"></div> Straight-through
+  </div>
+  <div class="ctype" id="ct-cross" onclick="setCable('cross',this)">
+    <div class="cline" style="background:#ff7043;border-top:2px dashed #ff7043;background:none;height:0"></div> Crossover
+  </div>
+  <div class="ctype" id="ct-serial" onclick="setCable('serial',this)">
+    <div class="cline" style="background:#ce93d8"></div> Serial DCE
+  </div>
+  <div class="ctype" id="ct-fiber" onclick="setCable('fiber',this)">
+    <div class="cline" style="background:#a5d6a7"></div> Fiber
+  </div>
+  <div class="ctype" id="ct-console" onclick="setCable('console',this)">
+    <div class="cline" style="background:#ffcc02;border-top:2px dotted #ffcc02;background:none;height:0"></div> Console
+  </div>
+</div>
+<div id="main">
+<div id="sidebar">
+  <div style="font-size:9px;color:var(--black);font-weight:700;font-family:'Space Mono',monospace;margin-bottom:4px;text-transform:uppercase">Device</div>
+  <div class="dev-btn" id="d-router" onclick="pickDev('router',this)">
+    <canvas width="44" height="32" id="ic-router"></canvas>Router
+  </div>
+  <div class="dev-btn" id="d-switch" onclick="pickDev('switch',this)">
+    <canvas width="44" height="32" id="ic-switch"></canvas>Switch
+  </div>
+  <div class="dev-btn" id="d-hub" onclick="pickDev('hub',this)">
+    <canvas width="44" height="32" id="ic-hub"></canvas>Hub
+  </div>
+  <div class="dev-btn" id="d-pc" onclick="pickDev('pc',this)">
+    <canvas width="44" height="32" id="ic-pc"></canvas>PC
+  </div>
+  <div class="dev-btn" id="d-server" onclick="pickDev('server',this)">
+    <canvas width="44" height="32" id="ic-server"></canvas>Server
+  </div>
+  <div class="dev-btn" id="d-laptop" onclick="pickDev('laptop',this)">
+    <canvas width="44" height="32" id="ic-laptop"></canvas>Laptop
+  </div>
+  <div class="dev-btn" id="d-cloud" onclick="pickDev('cloud',this)">
+    <canvas width="44" height="32" id="ic-cloud"></canvas>Cloud/ISP
+  </div>
+  <div class="dev-btn" id="d-phone" onclick="pickDev('phone',this)">
+    <canvas width="44" height="32" id="ic-phone"></canvas>IP Phone
+  </div>
+</div>
+<div id="canvas-wrap">
+  <canvas id="c"></canvas>
+  <div id="tooltip"></div>
+  <!-- Simulation Panel -->
+  <div id="sim-panel">
+    <div id="sim-header">
+      <h3>&#9654;&#9654; Hasil Simulasi</h3>
+      <button id="sim-close" onclick="closeSimPanel()">&#10005;</button>
+    </div>
+    <div id="sim-body">
+      <div id="sim-loading">
+        <div class="spinner"></div>
+        <p id="sim-loading-text">Menganalisis topologi jaringan...</p>
+      </div>
+      <div id="sim-result" class="hidden"></div>
+    </div>
+    <div id="sim-ai-bar"><p>Analisis oleh Gemini AI · NetSim v2</p></div>
+  </div>
+</div>
+</div>
+<div id="info-bar">
+  <span id="info-mode">Mode: Kabel</span>
+  <span id="info-cable">Kabel: Straight-through</span>
+  <span id="info-nodes">Nodes: 0</span>
+  <span id="info-edges">Koneksi: 0</span>
+  <span id="info-tip">Klik sidebar untuk tambah perangkat, klik 2 perangkat untuk hubungkan</span>
+</div>
+</div>
+
+<script>
+// API Key disimpan di server (.env) — tidak perlu diisi di sini
+
+var wrap=document.getElementById('canvas-wrap');
+var cv=document.getElementById('c');
+var ctx=cv.getContext('2d');
+var tooltip=document.getElementById('tooltip');
+
+var nodes=[],edges=[],sel=null,linkFrom=null;
+var mode='cable',cableType='straight';
+var dragNode=null,dragSX=0,dragSY=0,nSX=0,nSY=0,didMove=false;
+var devType=null;
+var cnt={router:0,switch:0,hub:0,pc:0,server:0,laptop:0,cloud:0,phone:0};
+var DEV_SIZE=36;
+var simHighlight={};// nodeId -> 'ok'|'warn'|'err'
+
+var CABLE_COLORS={straight:'#00E5D1',cross:'#FF6B1A',serial:'#B14EFF',fiber:'#2EFF8B',console:'#FFE134'};
+var CABLE_DASH={straight:[],cross:[8,4],serial:[],fiber:[],console:[3,3]};
+var CABLE_W={straight:2,cross:2,serial:2.5,fiber:2,console:1.5};
+var CABLE_NAMES={straight:'Straight-through',cross:'Crossover',serial:'Serial DCE',fiber:'Fiber Optic',console:'Console'};
+
+function resize(){
+  cv.width=wrap.clientWidth;
+  cv.height=wrap.clientHeight;
+  draw();
+}
+window.addEventListener('resize',resize);
+setTimeout(resize,50);
+
+function setMode(m,btn){
+  mode=m; linkFrom=null;
+  document.querySelectorAll('#topbar .btn').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+  if(m==='select') devType=null;
+  document.querySelectorAll('.dev-btn').forEach(function(b){b.classList.remove('on')});
+  infoMode();draw();
+}
+function setCable(t,el){
+  cableType=t;
+  document.querySelectorAll('.ctype').forEach(function(b){b.classList.remove('on')});
+  el.classList.add('on');
+  document.getElementById('info-cable').textContent='Kabel: '+CABLE_NAMES[t];
+}
+function pickDev(type,btn){
+  devType=type; mode='place';
+  document.querySelectorAll('.dev-btn').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+  document.querySelectorAll('#topbar .btn').forEach(function(b){b.classList.remove('on')});
+  infoMode();
+}
+function infoMode(){
+  var m=mode==='place'?'Klik kanvas untuk letakkan '+devType:mode==='cable'?'Kabel: klik 2 perangkat':'Pilih/Drag perangkat';
+  document.getElementById('info-mode').textContent='Mode: '+m;
+}
+
+function nodeAt(x,y){
+  for(var i=nodes.length-1;i>=0;i--){
+    var n=nodes[i];
+    if(Math.hypot(x-n.x,y-n.y)<=DEV_SIZE/2+6) return n;
+  }
+  return null;
+}
+
+function addNode(type,x,y){
+  cnt[type]++;
+  var labels={router:'Router',switch:'Switch',hub:'Hub',pc:'PC',server:'Server',laptop:'Laptop',cloud:'Cloud',phone:'Phone'};
+  var n={id:'n'+(Date.now()+(Math.random()*9999|0)),type:type,x:x,y:y,label:labels[type]+cnt[type]};
+  nodes.push(n);
+  updateInfo();draw();
+  return n;
+}
+
+function updateInfo(){
+  document.getElementById('info-nodes').textContent='Nodes: '+nodes.length;
+  document.getElementById('info-edges').textContent='Koneksi: '+edges.length;
+}
+
+cv.addEventListener('pointerdown',function(e){
+  e.preventDefault();
+  var r=cv.getBoundingClientRect();
+  var x=e.clientX-r.left, y=e.clientY-r.top;
+  var hit=nodeAt(x,y);
+
+  if(mode==='place'&&devType){
+    if(!hit){ addNode(devType,x,y); return; }
+  }
+
+  if(mode==='cable'){
+    if(hit){
+      if(!linkFrom){
+        linkFrom=hit;
+        document.getElementById('info-tip').textContent='Dari '+hit.label+' — klik perangkat tujuan';
+        draw();
+      } else if(linkFrom.id!==hit.id){
+        // prevent duplicate
+        var dup=edges.find(function(ed){return (ed.a===linkFrom.id&&ed.b===hit.id)||(ed.a===hit.id&&ed.b===linkFrom.id)});
+        if(!dup){
+          edges.push({a:linkFrom.id,b:hit.id,type:cableType});
+          document.getElementById('info-tip').textContent='Kabel '+CABLE_NAMES[cableType]+' dibuat!';
+        } else {
+          document.getElementById('info-tip').textContent='Koneksi sudah ada!';
+        }
+        linkFrom=null;
+        updateInfo();draw();
+      }
+    } else { linkFrom=null; draw(); }
+    return;
+  }
+
+  if(mode==='select'){
+    if(hit){
+      sel=hit; dragNode=hit; didMove=false;
+      dragSX=e.clientX; dragSY=e.clientY; nSX=hit.x; nSY=hit.y;
+      cv.setPointerCapture(e.pointerId);
+      draw();
+    } else { sel=null; draw(); }
+  }
+});
+
+cv.addEventListener('pointermove',function(e){
+  var r=cv.getBoundingClientRect();
+  var x=e.clientX-r.left, y=e.clientY-r.top;
+  if(dragNode){
+    var dx=e.clientX-dragSX, dy=e.clientY-dragSY;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) didMove=true;
+    dragNode.x=Math.max(20,Math.min(cv.width-20,nSX+dx));
+    dragNode.y=Math.max(20,Math.min(cv.height-20,nSY+dy));
+    draw(); return;
+  }
+  var hit=nodeAt(x,y);
+  if(hit){
+    var conn=edges.filter(function(ed){return ed.a===hit.id||ed.b===hit.id});
+    tooltip.style.display='block';
+    tooltip.style.left=(hit.x+22)+'px'; tooltip.style.top=(hit.y-18)+'px';
+    tooltip.textContent=hit.label+' | '+conn.length+' koneksi';
+  } else { tooltip.style.display='none'; }
+});
+
+cv.addEventListener('pointerup',function(){dragNode=null});
+
+function deleteSelected(){
+  if(!sel) return;
+  edges=edges.filter(function(e){return e.a!==sel.id&&e.b!==sel.id});
+  nodes=nodes.filter(function(n){return n.id!==sel.id});
+  sel=null; updateInfo(); draw();
+}
+
+function clearAll(){
+  nodes=[];edges=[];sel=null;linkFrom=null;cnt={router:0,switch:0,hub:0,pc:0,server:0,laptop:0,cloud:0,phone:0};
+  simHighlight={};
+  updateInfo();draw();
+  document.getElementById('info-tip').textContent='Klik sidebar untuk tambah perangkat';
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // white background with black dot grid
+  ctx.fillStyle='#fffef5';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(10,10,10,0.12)';
+  for(var gx=0;gx<cv.width;gx+=30) for(var gy=0;gy<cv.height;gy+=30) ctx.fillRect(gx,gy,2,2);
+
+  edges.forEach(function(e){
+    var a=nodes.find(function(n){return n.id===e.a});
+    var b=nodes.find(function(n){return n.id===e.b});
+    if(!a||!b) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    // highlight erroneous edges in red
+    var edgeErr=e._error;
+    ctx.strokeStyle=edgeErr?'#ff1744':CABLE_COLORS[e.type]||'#888';
+    ctx.lineWidth=edgeErr?3:(CABLE_W[e.type]||2);
+    ctx.setLineDash(edgeErr?[6,3]:CABLE_DASH[e.type]||[]);
+    ctx.stroke();
+    var mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    ctx.setLineDash([]);
+    ctx.font='bold 9px "Space Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillRect(mx-24,my-7,48,14);
+    ctx.fillStyle=edgeErr?'#FF3D9A':CABLE_COLORS[e.type];
+    ctx.fillText(e.type,mx,my);
+    ctx.restore();
+  });
+
+  nodes.forEach(function(n){
+    var isSel=sel&&sel.id===n.id;
+    var isLink=linkFrom&&linkFrom.id===n.id;
+    drawDevice(ctx,n,isSel,isLink);
+  });
+}
+
+function drawDevice(ctx,n,isSel,isLink){
+  ctx.save();
+  ctx.translate(n.x,n.y);
+  var hl=simHighlight[n.id];
+  if(hl){
+    ctx.beginPath();ctx.arc(0,0,DEV_SIZE/2+10,0,Math.PI*2);
+    ctx.strokeStyle=hl==='err'?'#FF3D9A':hl==='warn'?'#FFE134':'#2EFF8B';
+    ctx.lineWidth=3;ctx.setLineDash([]);ctx.stroke();
+  }
+  if(isSel){
+    ctx.beginPath();ctx.arc(0,0,DEV_SIZE/2+8,0,Math.PI*2);
+    ctx.strokeStyle='#FF3D9A';ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
+  }
+  if(isLink){
+    ctx.beginPath();ctx.arc(0,0,DEV_SIZE/2+8,0,Math.PI*2);
+    ctx.strokeStyle='#00E5D1';ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
+  }
+  var t=n.type;
+  if(t==='router') drawRouter(ctx);
+  else if(t==='switch') drawSwitch(ctx);
+  else if(t==='hub') drawHub(ctx);
+  else if(t==='pc') drawPC(ctx);
+  else if(t==='server') drawServer(ctx);
+  else if(t==='laptop') drawLaptop(ctx);
+  else if(t==='cloud') drawCloud(ctx);
+  else if(t==='phone') drawPhone(ctx);
+  ctx.font='bold 10px "Space Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(-24,DEV_SIZE/2+2,48,13);
+  ctx.fillStyle='#fffef5';
+  ctx.fillText(n.label,0,DEV_SIZE/2+3);
+  ctx.restore();
+}
+
+function drawRouter(c){
+  c.beginPath();c.arc(0,0,16,0,Math.PI*2);c.fillStyle='#FF6B1A';c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.strokeStyle='#fffef5';c.lineWidth=1.5;
+  c.beginPath();c.arc(0,0,7,0,Math.PI*2);c.stroke();
+  for(var i=0;i<4;i++){var a=i*Math.PI/2;c.beginPath();c.moveTo(Math.cos(a)*7,Math.sin(a)*7);c.lineTo(Math.cos(a)*14,Math.sin(a)*14);c.stroke();}
+  c.beginPath();c.moveTo(-14,0);c.lineTo(14,0);c.stroke();
+  c.beginPath();c.moveTo(0,-14);c.lineTo(0,14);c.stroke();
+}
+function drawSwitch(c){
+  c.fillStyle='#2EFF8B';c.beginPath();c.roundRect(-17,-10,34,20,2);c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.fillStyle='#0a0a0a';
+  for(var i=-2;i<=2;i++){c.beginPath();c.arc(i*6,0,2.5,0,Math.PI*2);c.fill();}
+  c.strokeStyle='#0a0a0a';c.lineWidth=1.5;
+  for(var i=-2;i<=2;i++){c.beginPath();c.moveTo(i*6,-10);c.lineTo(i*6,-14);c.stroke();}
+}
+function drawHub(c){
+  c.fillStyle='#B14EFF';c.beginPath();c.roundRect(-17,-10,34,20,2);c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.fillStyle='#fffef5';
+  for(var i=-3;i<=3;i+=2){c.beginPath();c.arc(i*4,0,2,0,Math.PI*2);c.fill();}
+  c.strokeStyle='#fffef5';c.lineWidth=1.5;
+  for(var i=-3;i<=3;i+=2){c.beginPath();c.moveTo(i*4,-10);c.lineTo(i*4,-14);c.stroke();}
+}
+function drawPC(c){
+  c.fillStyle='#00E5D1';c.beginPath();c.roundRect(-14,-12,28,22,2);c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.fillStyle='#0a0a0a';c.fillRect(-11,-9,22,15);
+  c.fillStyle='#00E5D1';c.fillRect(-2,5,4,3);
+  c.fillStyle='#0a0a0a';c.beginPath();c.roundRect(-10,9,20,3,1);c.fill();
+}
+function drawServer(c){
+  var cols=['#FFE134','#FF6B1A','#FF3D9A'];
+  for(var i=0;i<3;i++){
+    c.fillStyle=cols[i];
+    c.beginPath();c.roundRect(-15,-15+i*11,30,9,1);c.fill();
+    c.strokeStyle='#0a0a0a';c.lineWidth=1.5;c.stroke();
+    c.fillStyle='#0a0a0a';c.beginPath();c.arc(10,-10+i*11,2,0,Math.PI*2);c.fill();
+  }
+}
+function drawLaptop(c){
+  c.fillStyle='#FFE134';c.beginPath();c.roundRect(-15,-12,30,18,2);c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.fillStyle='#0a0a0a';c.fillRect(-12,-9,24,13);
+  c.fillStyle='#555';c.beginPath();c.moveTo(-18,6);c.lineTo(18,6);c.lineTo(15,10);c.lineTo(-15,10);c.closePath();c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=1.5;c.stroke();
+  c.fillStyle='#0a0a0a';c.fillRect(-4,7,8,2);
+}
+function drawCloud(c){
+  c.fillStyle='#4FC3F7';
+  c.beginPath();
+  c.arc(-6,-4,9,0,Math.PI*2);c.arc(4,-6,7,0,Math.PI*2);c.arc(8,2,7,0,Math.PI*2);c.arc(-2,4,8,0,Math.PI*2);c.arc(-10,2,7,0,Math.PI*2);
+  c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=1.5;
+  c.beginPath();c.arc(-6,-4,9,0,Math.PI*2);c.stroke();
+  c.beginPath();c.arc(4,-6,7,0,Math.PI*2);c.stroke();
+}
+function drawPhone(c){
+  c.fillStyle='#FF3D9A';c.beginPath();c.roundRect(-9,-15,18,28,3);c.fill();
+  c.strokeStyle='#0a0a0a';c.lineWidth=2;c.stroke();
+  c.fillStyle='#0a0a0a';c.fillRect(-7,-12,14,18);
+  c.fillStyle='#FF3D9A';c.beginPath();c.arc(0,9,2.5,0,Math.PI*2);c.fill();
+}
+
+function drawSidebarIcons(){
+  var map={router:drawRouter,switch:drawSwitch,hub:drawHub,pc:drawPC,server:drawServer,laptop:drawLaptop,cloud:drawCloud,phone:drawPhone};
+  Object.keys(map).forEach(function(k){
+    var ic=document.getElementById('ic-'+k);
+    if(!ic)return;
+    var c=ic.getContext('2d');
+    c.clearRect(0,0,44,32);
+    c.save();c.translate(22,16);
+    map[k](c);
+    c.restore();
+  });
+}
+drawSidebarIcons();
+
+function loadDemo(type){
+  clearAll();
+  var W=cv.width||500, H=cv.height||350;
+  if(type==='star'){
+    // Star: 1 switch di tengah, semua perangkat konek ke switch pakai straight-through
+    // Router ke switch = straight-through (✓)
+    // PC/Server/Laptop ke switch = straight-through (✓)
+    var sw=addNode('switch',W*.5,H*.45);
+    var router=addNode('router',W*.5,H*.1);
+    edges.push({a:sw.id,b:router.id,type:'straight'}); // switch-router: straight ✓
+    [['pc',W*.82,H*.27],['pc',W*.86,H*.62],['server',W*.5,H*.84],['pc',W*.14,H*.62],['laptop',W*.18,H*.27]].forEach(function(d){
+      var nd=addNode(d[0],d[1],d[2]);
+      edges.push({a:sw.id,b:nd.id,type:'straight'}); // switch-enddevice: straight ✓
+    });
+
+  } else if(type==='bus'){
+    // Bus Klasik: semua PC langsung berjejer di satu kabel backbone
+    // Tidak ada switch/hub — PC konek langsung ke PC berikutnya
+    // PC-to-PC langsung: Crossover ✓ (simulasi kabel koaksial backbone)
+    var busY=H*.5;
+    var devTypes=[['pc',W*.08],['laptop',W*.22],['pc',W*.36],['server',W*.5],['pc',W*.64],['laptop',W*.78],['pc',W*.92]];
+    var busnodes=devTypes.map(function(d){return addNode(d[0],d[1],busY);});
+    // Hubungkan berurutan pakai crossover (PC-to-PC langsung) ✓
+    for(var i=0;i<busnodes.length-1;i++){
+      edges.push({a:busnodes[i].id,b:busnodes[i+1].id,type:'cross'});
+    }
+
+  } else if(type==='ring'){
+    // Ring: router saling konek membentuk lingkaran pakai serial DCE (WAN link antar router)
+    // Setiap router punya switch lokal, device konek ke switch pakai straight-through
+    var rCount=4;
+    var Rr=Math.min(W,H)*.28;
+    var rs=[], sws=[];
+    for(var i=0;i<rCount;i++){
+      var a=(2*Math.PI*i/rCount)-Math.PI/2;
+      var rx=W*.5+Rr*Math.cos(a), ry=H*.47+Rr*Math.sin(a);
+      rs.push(addNode('router',rx,ry));
+      // Switch lokal sedikit lebih ke luar dari router
+      var swx=W*.5+(Rr+52)*Math.cos(a), swy=H*.47+(Rr+52)*Math.sin(a);
+      sws.push(addNode('switch',swx,swy));
+    }
+    // Ring backbone: router-to-router pakai serial DCE (WAN link) ✓
+    rs.forEach(function(n,i){edges.push({a:n.id,b:rs[(i+1)%rs.length].id,type:'serial'})});
+    // Router ke switch lokalnya: straight-through ✓
+    rs.forEach(function(n,i){edges.push({a:n.id,b:sws[i].id,type:'straight'})});
+    // End device ke switch lokal: straight-through ✓
+    var endDevs=[['pc',W*.5,H*.04],['pc',W*.95,H*.47],['server',W*.5,H*.9],['laptop',W*.05,H*.47]];
+    endDevs.forEach(function(d,i){
+      var nd=addNode(d[0],d[1],d[2]);
+      edges.push({a:sws[i].id,b:nd.id,type:'straight'});
+    });
+
+  } else if(type==='mesh'){
+    // Full Mesh: semua router saling terhubung langsung pakai serial DCE (WAN link) ✓
+    // PC/Server tidak langsung ke router — lewat switch lokal (more realistic)
+    // Switch ke router: straight-through ✓ | PC/Server ke switch: straight-through ✓
+    var Rs=Math.min(W,H)*.29;
+    var routerPositions=[
+      [W*.5, H*.1],   // atas
+      [W*.85,H*.38],  // kanan atas
+      [W*.72,H*.82],  // kanan bawah
+      [W*.28,H*.82],  // kiri bawah
+      [W*.15,H*.38]   // kiri atas
+    ];
+    var rs=routerPositions.map(function(p){return addNode('router',p[0],p[1]);});
+    // Full mesh: setiap router konek ke semua router lain pakai serial DCE ✓
+    for(var i=0;i<rs.length;i++){
+      for(var j=i+1;j<rs.length;j++){
+        edges.push({a:rs[i].id,b:rs[j].id,type:'serial'});
+      }
+    }
+    // Tiap router punya switch lokal + 1 end device
+    var localDevs=[
+      ['pc',    W*.5,  H*.92],  // bawah router atas
+      ['server',W*.97, H*.6 ],  // kanan router kanan-atas
+      ['laptop',W*.88, H*.1 ],  // atas router kanan-bawah
+      ['pc',    W*.12, H*.1 ],  // atas router kiri-bawah
+      ['server',W*.03, H*.6 ]   // kiri router kiri-atas
+    ];
+    localDevs.forEach(function(d,i){
+      var sw=addNode('switch',(routerPositions[i][0]+d[1])/2,(routerPositions[i][1]+d[2])/2);
+      var nd=addNode(d[0],d[1],d[2]);
+      edges.push({a:rs[i].id,b:sw.id,type:'straight'}); // router-switch: straight ✓
+      edges.push({a:sw.id, b:nd.id, type:'straight'});  // switch-device: straight ✓
+    });
+  }
+  updateInfo();draw();
+}
+
+// ============================================================
+// SIMULATION ENGINE
+// ============================================================
+
+function buildTopologyDescription(){
+  var devCounts={};
+  nodes.forEach(function(n){ devCounts[n.type]=(devCounts[n.type]||0)+1; });
+
+  var edgeList=edges.map(function(e){
+    var a=nodes.find(function(n){return n.id===e.a});
+    var b=nodes.find(function(n){return n.id===e.b});
+    if(!a||!b) return null;
+    return a.label+'('+a.type+') <--['+e.type+']---> '+b.label+'('+b.type+')';
+  }).filter(Boolean);
+
+  var nodeList=nodes.map(function(n){
+    var conn=edges.filter(function(e){return e.a===n.id||e.b===n.id});
+    return n.label+'('+n.type+', '+conn.length+' koneksi)';
+  });
+
+  return {
+    summary: 'Nodes: '+nodes.length+', Edges: '+edges.length,
+    devices: devCounts,
+    nodeList: nodeList,
+    edgeList: edgeList
+  };
+}
+
+function closeSimPanel(){
+  document.getElementById('sim-panel').classList.remove('open');
+  simHighlight={};
+  edges.forEach(function(e){e._error=false;});
+  draw();
+}
+
+function openSimPanel(){
+  document.getElementById('sim-panel').classList.add('open');
+}
+
+function setSimLoading(text){
+  document.getElementById('sim-loading').classList.add('active');
+  document.getElementById('sim-result').classList.add('hidden');
+  document.getElementById('sim-loading-text').textContent=text||'Menganalisis topologi...';
+}
+
+function setSimResult(html){
+  document.getElementById('sim-loading').classList.remove('active');
+  var r=document.getElementById('sim-result');
+  r.classList.remove('hidden');
+  r.innerHTML=html;
+}
+
+function badge(type,text){
+  return '<span class="sim-badge badge-'+type+'">'+text+'</span>';
+}
+
+function simItem(icon,title,desc,status){
+  var color=status==='err'?'#ff5252':status==='warn'?'#ffd740':status==='ok'?'#69f0ae':'#80deea';
+  return '<div class="sim-item"><span class="sim-icon">'+icon+'</span><div class="sim-text"><strong>'+title+'</strong><span>'+desc+'</span></div></div>';
+}
+
+async function runSimulation(){
+  if(nodes.length===0){
+    alert('Tidak ada perangkat di kanvas!');
+    return;
+  }
+  openSimPanel();
+  setSimLoading('Menganalisis topologi jaringan...');
+
+  // Clear previous highlights
+  simHighlight={};
+  edges.forEach(function(e){e._error=false;});
+  draw();
+
+  var topo=buildTopologyDescription();
+
+  var prompt = `Kamu adalah simulator dan validator topologi jaringan komputer. Analisis topologi berikut secara ketat dan akurat.
+
+TOPOLOGI YANG DIANALISIS:
+- ${topo.summary}
+- Perangkat: ${JSON.stringify(topo.devices)}
+- Daftar node: ${topo.nodeList.join(', ')}
+- Daftar koneksi:
+${topo.edgeList.map(function(e){return '  * '+e}).join('\n')}
+
+ATURAN KABEL YANG KETAT (hanya masukkan ke cable_errors jika JELAS salah):
+- PC/Laptop/Server/Phone ke Switch atau Hub: WAJIB Straight-through. Jika bukan = ERROR.
+- PC/Laptop/Server ke PC/Laptop/Server langsung (tanpa switch): WAJIB Crossover. Jika bukan = ERROR.
+- Switch ke Switch langsung: WAJIB Crossover. Jika bukan = ERROR.
+- Router ke Switch atau Hub: WAJIB Straight-through. Jika bukan = ERROR.
+- Router ke Router langsung (WAN link): WAJIB Serial DCE atau Crossover. Jika Straight-through = ERROR.
+- Router ke PC/Laptop/Server langsung (tanpa switch): WAJIB Crossover. Jika bukan = ERROR.
+- Ke Cloud/ISP: Fiber direkomendasikan tapi bukan error fatal.
+- Console: untuk manajemen saja, bukan link data.
+
+ATURAN PENTING UNTUK cable_errors:
+- HANYA isi cable_errors jika kabel JELAS SALAH sesuai aturan di atas.
+- Jika kabel sudah benar, jangan masukkan ke cable_errors sama sekali.
+- Jangan masukkan koneksi yang sudah benar hanya untuk memberi saran tambahan.
+- Saran dan peringatan masuk ke "warnings", BUKAN ke "cable_errors".
+
+SKOR KESEHATAN (mulai 100):
+- Kurangi 15 per cable_error nyata
+- Kurangi 20 per isolated node
+- Kurangi 5-10 per warning serius (SPOF, loop, dll)
+- Tambah 5 jika ada redundansi
+
+Balas HANYA dalam format JSON berikut, tanpa teks lain, tanpa backtick markdown:
+{
+  "topology_type": "nama topologi",
+  "topology_desc": "penjelasan singkat 1-2 kalimat",
+  "health_score": 85,
+  "isolated_nodes": [],
+  "cable_errors": [
+    {"edge": "LabelA(typeA) <--[cabletype]--> LabelB(typeB)", "issue": "mengapa ini salah", "suggestion": "kabel yang benar"}
+  ],
+  "warnings": [
+    {"title": "judul", "desc": "penjelasan"}
+  ],
+  "ok_points": [
+    {"title": "hal benar", "desc": "penjelasan singkat"}
+  ],
+  "summary": "ringkasan 1-2 kalimat"
+}`;
+
+  try {
+    setSimLoading('Menghubungi AI untuk analisis mendalam...');
+
+    var response;
+    try {
+      // Panggil proxy backend — API key aman di server
+      response = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+      });
+    } catch(netErr) {
+      setSimResult('<div class="sim-item"><span class="sim-icon">🌐</span><div class="sim-text"><strong>Gagal konek ke server</strong><span>Pastikan server Node.js sudah jalan.<br><small style="color:#888">Detail: '+netErr.message+'</small></span></div></div>');
+      return;
+    }
+
+    var data = await response.json();
+
+    if(!response.ok || data.error){
+      var errMsg = data.error || ('HTTP '+response.status);
+      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Error dari server</strong><span>'+errMsg+'</span></div></div>');
+      return;
+    }
+
+    var text = data.text || '';
+    if(!text) {
+      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Respons AI kosong</strong><span>API terhubung tapi tidak ada jawaban. Coba lagi.</span></div></div>');
+      return;
+    }
+
+    text = text.replace(/```json|```/g,'').trim();
+    var result;
+    try { result = JSON.parse(text); }
+    catch(parseErr){
+      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Gagal membaca respons AI</strong><span>Format tidak valid. Coba lagi.</span></div></div>');
+      return;
+    }
+
+    setSimLoading('Memproses hasil simulasi...');
+    await new Promise(function(r){setTimeout(r,300)});
+
+    applySimulationHighlights(result);
+    renderSimResult(result);
+
+  } catch(err){
+    console.error(err);
+    setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Error tidak terduga</strong><span>'+err.message+'<br><small style="color:#888">Buka F12 → Console untuk detail lengkap.</small></span></div></div>');
+  }
+}
+
+function applySimulationHighlights(result){
+  // Mark errored edges
+  if(result.cable_errors && result.cable_errors.length>0){
+    result.cable_errors.forEach(function(ce){
+      // Try to match edge by parsing labels
+      var match=ce.edge.match(/^(.+?)\((.+?)\)\s*<--\[(.+?)\]-->\s*(.+?)\((.+?)\)$/);
+      if(!match) return;
+      var labelA=match[1].trim(), labelB=match[4].trim();
+      edges.forEach(function(e){
+        var a=nodes.find(function(n){return n.id===e.a});
+        var b=nodes.find(function(n){return n.id===e.b});
+        if(!a||!b) return;
+        if((a.label===labelA&&b.label===labelB)||(a.label===labelB&&b.label===labelA)){
+          e._error=true;
+        }
+      });
+    });
+  }
+  // Mark isolated nodes
+  if(result.isolated_nodes && result.isolated_nodes.length>0){
+    result.isolated_nodes.forEach(function(label){
+      var n=nodes.find(function(n){return n.label===label});
+      if(n) simHighlight[n.id]='err';
+    });
+  }
+  // Mark nodes with warnings (nodes in cable_errors)
+  if(result.cable_errors){
+    result.cable_errors.forEach(function(ce){
+      var match=ce.edge.match(/^(.+?)\(.+?\)\s*<--\[.+?\]-->\s*(.+?)\(.+?\)$/);
+      if(!match) return;
+      [match[1].trim(),match[2].trim()].forEach(function(label){
+        var n=nodes.find(function(n){return n.label===label});
+        if(n && !simHighlight[n.id]) simHighlight[n.id]='warn';
+      });
+    });
+  }
+  draw();
+}
+
+function renderSimResult(r){
+  var score=r.health_score||0;
+  var scoreClass=score>=80?'score-ok':score>=50?'score-warn':'score-err';
+  var statusBadge=score>=80?badge('ok','✓ SEHAT'):score>=50?badge('warn','⚠ PERBAIKI'):badge('err','✗ KRITIS');
+
+  var html='';
+
+  // Summary card
+  html+='<div class="sim-summary">';
+  html+='<div class="sim-summary-score '+scoreClass+'">'+score+'</div>';
+  html+='<div class="sim-summary-meta">';
+  html+='<div class="topo-name">'+escH(r.topology_type||'Tidak Diketahui')+' '+statusBadge+'</div>';
+  html+='<div class="topo-desc">'+escH(r.topology_desc||'')+'</div>';
+  html+='</div></div>';
+
+  // Summary text
+  if(r.summary){
+    html+='<div class="sim-section"><div class="sim-section-title">📋 Ringkasan</div>';
+    html+='<div class="sim-section-body"><div class="sim-item"><span class="sim-icon">💬</span><div class="sim-text"><span>'+escH(r.summary)+'</span></div></div></div></div>';
+  }
+
+  // Cable errors
+  if(r.cable_errors && r.cable_errors.length>0){
+    html+='<div class="sim-section"><div class="sim-section-title">🔴 Kesalahan Kabel ('+r.cable_errors.length+')</div><div class="sim-section-body">';
+    r.cable_errors.forEach(function(ce){
+      html+=simItem('❌',escH(ce.edge),escH(ce.issue)+' → <strong style="color:#ffd740">'+escH(ce.suggestion)+'</strong>','err');
+    });
+    html+='</div></div>';
+  } else {
+    html+='<div class="sim-section"><div class="sim-section-title">🟢 Kabel</div><div class="sim-section-body">';
+    html+=simItem('✅','Semua kabel sudah benar','Tidak ada kesalahan jenis kabel','ok');
+    html+='</div></div>';
+  }
+
+  // Isolated nodes
+  if(r.isolated_nodes && r.isolated_nodes.length>0){
+    html+='<div class="sim-section"><div class="sim-section-title">🔴 Node Terisolasi ('+r.isolated_nodes.length+')</div><div class="sim-section-body">';
+    r.isolated_nodes.forEach(function(label){
+      html+=simItem('🔴',escH(label),'Node ini tidak terhubung ke jaringan','err');
+    });
+    html+='</div></div>';
+  }
+
+  // Warnings
+  if(r.warnings && r.warnings.length>0){
+    html+='<div class="sim-section"><div class="sim-section-title">⚠️ Peringatan ('+r.warnings.length+')</div><div class="sim-section-body">';
+    r.warnings.forEach(function(w){
+      html+=simItem('⚠️',escH(w.title),escH(w.desc),'warn');
+    });
+    html+='</div></div>';
+  }
+
+  // OK points
+  if(r.ok_points && r.ok_points.length>0){
+    html+='<div class="sim-section"><div class="sim-section-title">✅ Yang Sudah Benar ('+r.ok_points.length+')</div><div class="sim-section-body">';
+    r.ok_points.forEach(function(ok){
+      html+=simItem('✅',escH(ok.title),escH(ok.desc),'ok');
+    });
+    html+='</div></div>';
+  }
+
+  setSimResult(html);
+}
+
+function escH(s){
+  if(!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var _apiKey='';
+
+function saveApiKey(val){
+  _apiKey=val.trim();
+  try{ localStorage.setItem('netsim_apikey', _apiKey); } catch(e){}
+}
+
+setMode('cable',document.getElementById('btn-cable'));
+loadDemo('star');
+</script>
+<!-- GUIDED TOUR OVERLAY -->
+<div id="tour-overlay"></div>
+<div id="tour-spotlight" style="display:none"></div>
+<div id="tour-card" style="display:none">
+  <div class="tour-step-count" id="tour-step-label">LANGKAH 1 / 7</div>
+  <div id="tour-progress"></div>
+  <h4 id="tour-title">Selamat Datang!</h4>
+  <p id="tour-desc">Deskripsi langkah.</p>
+  <div class="tour-btns">
+    <button id="tour-prev" onclick="tourPrev()">← Kembali</button>
+    <button id="tour-next" onclick="tourNext()">Lanjut →</button>
+    <span id="tour-skip" onclick="endTour()">Lewati</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GUIDED TOUR SYSTEM
+// ============================================================
+var tourActive=false;
+var tourStep=0;
+
+var TOUR_STEPS=[
+  {
+    target:'#topbar .title',
+    title:'Selamat Datang di NetSim! 👋',
+    desc:'NetSim adalah simulator topologi jaringan komputer. Kamu bisa membuat, menghubungkan, dan memvalidasi jaringan seperti di dunia nyata. Yuk, kita mulai!',
+    pos:'bottom',
+    action:null
+  },
+  {
+    target:'#sidebar',
+    title:'1️⃣ Pilih Perangkat',
+    desc:'Klik salah satu perangkat di panel kiri ini — misalnya "PC", "Router", atau "Switch". Setelah diklik, kursor berubah, lalu klik di area kanvas untuk meletakkan perangkat.',
+    pos:'right',
+    action:{label:'Coba: Klik PC', fn:function(){
+      document.getElementById('d-pc').click();
+      endTour();
+      showTip('Sekarang klik di kanvas untuk meletakkan PC! Lalu jalankan tour lagi untuk lanjut.');
+    }}
+  },
+  {
+    target:'#cable-bar',
+    title:'2️⃣ Pilih Jenis Kabel',
+    desc:'Sebelum menghubungkan perangkat, pilih jenis kabel yang sesuai:\n• Straight-through → PC/Server ke Switch\n• Crossover → PC ke PC langsung\n• Serial DCE → Router ke Router (WAN)\n• Fiber → ke Cloud/ISP',
+    pos:'bottom',
+    action:null
+  },
+  {
+    target:'#btn-cable',
+    title:'3️⃣ Mode Kabel (Hubungkan)',
+    desc:'Pastikan tombol "⏤ KABEL" aktif (warna cyan). Lalu klik perangkat pertama → klik perangkat kedua. Kabel akan terbentuk otomatis!',
+    pos:'bottom',
+    action:{label:'Aktifkan Mode Kabel', fn:function(){
+      var btn=document.getElementById('btn-cable');
+      setMode('cable',btn);
+    }}
+  },
+  {
+    target:'#btn-select',
+    title:'4️⃣ Mode Pilih & Drag',
+    desc:'Klik "▶ PILIH" untuk masuk mode seleksi. Di sini kamu bisa:\n• Klik perangkat → lalu tekan "✕ HAPUS" untuk menghapus\n• Drag (tahan & geser) perangkat untuk memindahkan posisinya',
+    pos:'bottom',
+    action:{label:'Coba Mode Pilih', fn:function(){
+      var btn=document.getElementById('btn-select');
+      setMode('select',btn);
+    }}
+  },
+  {
+    target:'#topbar',
+    title:'5️⃣ Load Contoh Topologi',
+    desc:'Bingung mulai dari mana? Klik tombol ★ BINTANG, ≡ BUS, ◯ RING, atau ⬡ MESH untuk langsung memuat contoh topologi lengkap yang sudah benar!',
+    pos:'bottom',
+    action:{label:'Load Topologi Bintang', fn:function(){
+      loadDemo('star');
+    }}
+  },
+  {
+    target:'#topbar .btn-sim',
+    title:'6️⃣ Simulasi & Validasi AI 🤖',
+    desc:'Setelah jaringan selesai dibuat, klik "▶▶ SIMULASI" untuk menganalisis topologi dengan AI. Hasilnya mencakup:\n• Skor kesehatan jaringan\n• Deteksi kabel yang salah\n• Peringatan SPOF & loop\n• Saran perbaikan',
+    pos:'bottom',
+    action:{label:'Coba Simulasi Sekarang', fn:function(){
+      endTour();
+      runSimulation();
+    }}
+  }
+];
+
+function startTour(){
+  tourActive=true;
+  tourStep=0;
+  renderTourStep();
+}
+
+function renderTourStep(){
+  var step=TOUR_STEPS[tourStep];
+  var total=TOUR_STEPS.length;
+
+  // Update text
+  document.getElementById('tour-step-label').textContent='LANGKAH '+(tourStep+1)+' / '+total;
+  document.getElementById('tour-title').textContent=step.title;
+  document.getElementById('tour-desc').textContent=step.desc;
+
+  // Progress dots
+  var dots='';
+  for(var i=0;i<total;i++) dots+='<div class="tour-dot'+(i===tourStep?' active':'')+'"></div>';
+  document.getElementById('tour-progress').innerHTML=dots;
+
+  // Action button
+  var existing=document.getElementById('tour-action');
+  if(existing) existing.remove();
+  if(step.action){
+    var ab=document.createElement('button');
+    ab.id='tour-action';
+    ab.textContent=step.action.label;
+    var fn=step.action.fn;
+    ab.onclick=function(){fn();if(tourActive)tourNext();};
+    document.querySelector('#tour-card .tour-btns').insertBefore(ab,document.getElementById('tour-prev'));
+  }
+
+  // Prev button visibility
+  document.getElementById('tour-prev').style.opacity=tourStep===0?'0.3':'1';
+  document.getElementById('tour-prev').style.pointerEvents=tourStep===0?'none':'all';
+
+  // Next button label
+  document.getElementById('tour-next').textContent=tourStep===total-1?'Selesai ✓':'Lanjut →';
+
+  // Spotlight
+  positionSpotlight(step.target, step.pos);
+
+  // Show elements
+  document.getElementById('tour-overlay').classList.add('active');
+  document.getElementById('tour-spotlight').style.display='block';
+  document.getElementById('tour-card').style.display='block';
+}
+
+function positionSpotlight(selector, cardPos){
+  var el=document.querySelector(selector);
+  if(!el){return;}
+  var r=el.getBoundingClientRect();
+  var pad=8;
+  var spot=document.getElementById('tour-spotlight');
+  spot.style.left=(r.left-pad)+'px';
+  spot.style.top=(r.top-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px';
+  spot.style.height=(r.height+pad*2)+'px';
+
+  var card=document.getElementById('tour-card');
+  var cw=290, ch=200;
+  var vw=window.innerWidth, vh=window.innerHeight;
+  var cx,cy;
+  if(cardPos==='bottom'){
+    cx=Math.min(r.left, vw-cw-12);
+    cy=Math.min(r.bottom+16, vh-ch-12);
+  } else if(cardPos==='right'){
+    cx=Math.min(r.right+16, vw-cw-12);
+    cy=Math.max(12, r.top);
+  } else {
+    cx=Math.min(r.left, vw-cw-12);
+    cy=Math.max(12, r.top-ch-16);
+  }
+  cx=Math.max(12,cx);
+  cy=Math.max(12,cy);
+  card.style.left=cx+'px';
+  card.style.top=cy+'px';
+}
+
+function tourNext(){
+  if(tourStep<TOUR_STEPS.length-1){
+    tourStep++;
+    renderTourStep();
+  } else {
+    endTour();
+    showTip('Tour selesai! Selamat mencoba NetSim 🎉');
+  }
+}
+
+function tourPrev(){
+  if(tourStep>0){tourStep--;renderTourStep();}
+}
+
+function endTour(){
+  tourActive=false;
+  document.getElementById('tour-overlay').classList.remove('active');
+  document.getElementById('tour-spotlight').style.display='none';
+  document.getElementById('tour-card').style.display='none';
+}
+
+function showTip(msg){
+  var tip=document.createElement('div');
+  tip.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#0a0a0a;color:#FFE134;border:3px solid #0a0a0a;padding:10px 20px;font-family:Space Mono,monospace;font-size:11px;font-weight:700;z-index:2000;box-shadow:4px 4px 0 #FFE134;max-width:380px;text-align:center';
+  tip.textContent=msg;
+  document.body.appendChild(tip);
+  setTimeout(function(){tip.remove();},3500);
+}
+
+// Close tour if clicking overlay
+document.getElementById('tour-overlay').addEventListener('click',endTour);
+
+// Auto-show tour hint after 1.5s if first visit
+setTimeout(function(){
+  try{
+    if(!localStorage.getItem('netsim_toured')){
+      showTip('💡 Baru pertama kali? Klik tombol "? PANDUAN" untuk tour interaktif!');
+      localStorage.setItem('netsim_toured','1');
+    }
+  }catch(e){}
+},1500);
+</script>
+</body>
+</html>

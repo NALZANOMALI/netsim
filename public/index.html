@@ -15,9 +15,26 @@
   --pink:#FF3D9A;
   --green:#2EFF8B;
   --purple:#B14EFF;
-  --border:3px solid var(--black);
-  --shadow:4px 4px 0 var(--black);
-  --shadow-lg:6px 6px 0 var(--black);
+  --glass: rgba(10, 10, 10, 0.6);
+  --border: 3px solid rgba(10, 10, 10, 0.6);
+  --shadow: 3px 3px 0 rgba(10, 10, 10, 0.6);
+  --shadow-lg: 5px 5px 0 rgba(10, 10, 10, 0.6);
+  --radius: 6px; 
+}
+
+
+/* 1. FORCE SEMUA ELEMEN PAKAI VARIABEL ROOT */
+.btn, .ctype, .dev-btn, .sim-section, .sim-summary, #sim-panel {
+  border-radius: var(--radius) !important;
+  border: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+  transition: transform .1s, box-shadow .1s;
+}
+
+/* 2. ATUR ANIMASI KLIK KE ARAH KIRI ATAS */
+.btn:active, .dev-btn:active, .ctype:active {
+  transform: translate(-3px, -3px) !important;
+  box-shadow: 0 0 0 var(--glass) !important;
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -964,21 +981,28 @@ TOPOLOGI YANG DIANALISIS:
 - Daftar koneksi:
 ${topo.edgeList.map(function(e){return '  * '+e}).join('\n')}
 
-ATURAN KABEL YANG KETAT (hanya masukkan ke cable_errors jika JELAS salah):
-- PC/Laptop/Server/Phone ke Switch atau Hub: WAJIB Straight-through. Jika bukan = ERROR.
-- PC/Laptop/Server ke PC/Laptop/Server langsung (tanpa switch): WAJIB Crossover. Jika bukan = ERROR.
-- Switch ke Switch langsung: WAJIB Crossover. Jika bukan = ERROR.
-- Router ke Switch atau Hub: WAJIB Straight-through. Jika bukan = ERROR.
-- Router ke Router langsung (WAN link): WAJIB Serial DCE atau Crossover. Jika Straight-through = ERROR.
-- Router ke PC/Laptop/Server langsung (tanpa switch): WAJIB Crossover. Jika bukan = ERROR.
+
+ATURAN KAMUS KABEL APLIKASI (PENTING):
+- Jika teks data koneksi tertulis "straight", artinya itu adalah kabel "Straight-through" yang VALID.
+- Jika teks data koneksi tertulis "cross", artinya itu adalah kabel "Crossover" yang VALID.
+- Jika teks data koneksi tertulis "serial", artinya itu adalah kabel "Serial DCE" yang VALID.
+
+ATURAN KABEL YANG KETAT (JANGAN masukkan ke cable_errors jika sudah sesuai Kamus di atas):
+- PC/Laptop/Server/Phone ke Switch atau Hub: WAJIB menggunakan kabel "straight". Jika bukan = ERROR.
+- PC/Laptop/Server ke PC/Laptop/Server langsung (tanpa switch): WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
+- Switch ke Switch langsung: WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
+- Router ke Switch atau Hub: WAJIB menggunakan kabel "straight". Jika bukan = ERROR.
+- Router ke Router langsung (WAN link): WAJIB menggunakan kabel "serial" atau "cross". Jika menggunakan "straight" = ERROR.
+- Router ke PC/Laptop/Server langsung (tanpa switch): WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
 - Ke Cloud/ISP: Fiber direkomendasikan tapi bukan error fatal.
 - Console: untuk manajemen saja, bukan link data.
 
 ATURAN PENTING UNTUK cable_errors:
-- HANYA isi cable_errors jika kabel JELAS SALAH sesuai aturan di atas.
+- Ingat, nilai teks seperti "cross", "straight", dan "serial" adalah format resmi dan valid dari aplikasi. JANGAN PERNAH menganggap teks "cross" sebagai kesalahan dan jangan suruh user menggantinya ke "Crossover" karena itu adalah barang yang sama.
+- HANYA isi cable_errors jika kabel JELAS SALAH sesuai aturan pencocokan di atas.
 - Jika kabel sudah benar, jangan masukkan ke cable_errors sama sekali.
-- Jangan masukkan koneksi yang sudah benar hanya untuk memberi saran tambahan.
-- Saran dan peringatan masuk ke "warnings", BUKAN ke "cable_errors".
+
+
 
 SKOR KESEHATAN (mulai 100):
 - Kurangi 15 per cable_error nyata

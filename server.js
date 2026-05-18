@@ -1,6 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const path = require('path');
+const path = require('node:path');
 require('dotenv').config();
 
 const app = express();
@@ -22,8 +22,8 @@ app.post('/api/simulate', async (req, res) => {
   }
 
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,6 +42,7 @@ app.post('/api/simulate', async (req, res) => {
 
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     res.json({ text });
+
 
   } catch (err) {
     console.error('Proxy error:', err);

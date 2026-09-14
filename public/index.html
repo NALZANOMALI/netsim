@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NetSim</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Nunito:wght@700;800;900&display=swap');
@@ -38,7 +39,7 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Space Mono',monospace;font-size:12px;background:var(--white);color:var(--black);user-select:none}
+body{font-family:'Space Mono',monospace;font-size:12px;background:var(--white);color:var(--black);-webkit-user-select:none;user-select:none}
 #app{display:flex;flex-direction:column;height:100vh;min-height:560px}
 
 /* TOPBAR */
@@ -187,6 +188,72 @@ canvas#c{position:absolute;top:0;left:0;z-index:1}
 }
 #info-bar span{color:#aaa}
 #info-bar span:first-child{color:var(--yellow)}
+
+/* BUTTON DISABLED STATE */
+.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:2px 2px 0 var(--black);transform:none!important}
+
+/* TOPOLOGY GUIDE TOGGLE ICON */
+#topo-guide-toggle{
+  position:absolute;top:10px;left:10px;z-index:13;
+  display:none;align-items:center;gap:5px;
+  padding:6px 12px;
+  border:2.5px solid var(--black);
+  border-radius:0;
+  background:var(--yellow);color:var(--black);
+  font-family:'Space Mono',monospace;font-size:10px;font-weight:700;
+  text-transform:uppercase;cursor:pointer;
+  box-shadow:3px 3px 0 var(--black);
+  transition:transform .1s,box-shadow .1s;
+  animation:guide-pop .3s ease;
+}
+#topo-guide-toggle:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
+#topo-guide-toggle:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--black)}
+#topo-guide-toggle.on{background:var(--orange);color:var(--white)}
+@keyframes guide-pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* TOPOLOGY GUIDE PANEL */
+#topo-guide{
+  position:absolute;top:10px;left:10px;width:250px;max-height:calc(100% - 20px);
+  background:var(--white);border:var(--border);box-shadow:var(--shadow-lg);
+  z-index:14;display:none;flex-direction:column;overflow:hidden;
+  transform-origin:top left;
+  animation:guide-pop .18s ease;
+}
+#topo-guide.open{display:flex}
+#topo-guide-head{
+  background:var(--yellow);border-bottom:var(--border);
+  padding:7px 10px;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;cursor:move;-webkit-user-select:none;user-select:none;touch-action:none;
+}
+#topo-guide.dragging{transition:none!important;opacity:.92}
+#topo-guide-head span{
+  font-family:'Nunito',sans-serif;font-size:12px;font-weight:900;
+  text-transform:uppercase;color:var(--black);
+}
+#topo-guide-close{
+  background:var(--black);border:none;color:var(--white);
+  cursor:pointer;font-size:11px;padding:1px 7px;font-weight:700;
+}
+#topo-guide-close:hover{background:#333}
+#topo-guide-body{
+  padding:9px 10px;overflow-y:auto;font-size:10px;line-height:1.5;color:var(--black);
+}
+#topo-guide-body::-webkit-scrollbar{width:4px}
+#topo-guide-body::-webkit-scrollbar-thumb{background:var(--black)}
+.tg-desc{margin-bottom:8px;color:#222}
+.tg-sub{
+  font-family:'Space Mono',monospace;font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--black);
+  border-bottom:2px solid var(--black);padding-bottom:2px;margin-bottom:5px;margin-top:8px;
+}
+.tg-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.tg-list li{display:flex;align-items:flex-start;gap:6px}
+.tg-swatch{width:14px;height:5px;border-radius:1px;margin-top:4px;flex-shrink:0;border:1px solid var(--black)}
+.tg-note{color:#666;font-style:italic}
+.tg-tip{
+  margin-top:9px;padding:7px 8px;background:#FFF3B0;
+  border:2px solid var(--black);font-size:9.5px;line-height:1.5;
+}
 
 /* TOOLTIP */
 #tooltip{
@@ -412,8 +479,6 @@ canvas#c{position:absolute;top:0;left:0;z-index:1}
 <div id="app">
 <div id="topbar">
   <span class="title">⬡ NetSim</span>
-  <button class="btn" id="btn-select" onclick="setMode('select',this)">▶ Pilih</button>
-  <button class="btn on" id="btn-cable" onclick="setMode('cable',this)">⏤ Kabel</button>
   <button class="btn" id="btn-del" onclick="deleteSelected()">✕ Hapus</button>
   <div class="sep"></div>
   <button class="btn" onclick="clearAll()">↺ Reset</button>
@@ -421,6 +486,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1}
   <button class="btn" onclick="loadDemo('bus')">≡ Bus</button>
   <button class="btn" onclick="loadDemo('ring')">◯ Ring</button>
   <button class="btn" onclick="loadDemo('mesh')">⬡ Mesh</button>
+  <button class="btn" onclick="loadDemo('hybrid')">⬢ Hybrid</button>
   <div class="sep"></div>
   <span style="color:#007a3d;font-size:9px;font-weight:700;font-family:'Space Mono',monospace">● AI AKTIF</span>
   <div class="sep"></div>
@@ -476,6 +542,16 @@ canvas#c{position:absolute;top:0;left:0;z-index:1}
 <div id="canvas-wrap">
   <canvas id="c"></canvas>
   <div id="tooltip"></div>
+  <!-- Topology Guide Toggle Icon -->
+  <button id="topo-guide-toggle" onclick="toggleTopoGuide()" style="display:none">📘 Panduan</button>
+  <!-- Topology Guide Panel -->
+  <div id="topo-guide">
+    <div id="topo-guide-head">
+      <span id="topo-guide-title">★ Panduan Topologi</span>
+      <button id="topo-guide-close" onclick="closeTopoGuide()">&#10005;</button>
+    </div>
+    <div id="topo-guide-body"></div>
+  </div>
   <!-- Simulation Panel -->
   <div id="sim-panel">
     <div id="sim-header">
@@ -498,7 +574,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1}
   <span id="info-cable">Kabel: Straight-through</span>
   <span id="info-nodes">Nodes: 0</span>
   <span id="info-edges">Koneksi: 0</span>
-  <span id="info-tip">Klik sidebar untuk tambah perangkat, klik 2 perangkat untuk hubungkan</span>
+  <span id="info-tip">Klik sidebar untuk tambah perangkat, klik 2 perangkat untuk hubungkan, atau klik objek untuk memilihnya</span>
 </div>
 </div>
 
@@ -513,10 +589,23 @@ var tooltip=document.getElementById('tooltip');
 var nodes=[],edges=[],sel=null,linkFrom=null;
 var mode='cable',cableType='straight';
 var dragNode=null,dragSX=0,dragSY=0,nSX=0,nSY=0,didMove=false;
+var dragEdgeHandle=null; // {edge,end:'a'|'b',curX,curY} — dragging a cable endpoint to another device
 var devType=null;
 var cnt={router:0,switch:0,hub:0,pc:0,server:0,laptop:0,cloud:0,phone:0};
 var DEV_SIZE=36;
 var simHighlight={};// nodeId -> 'ok'|'warn'|'err'
+
+// Guide layer: contoh topologi ditampilkan sebagai panduan semi-transparan,
+// TIDAK ikut jadi node/edge sungguhan — siswa harus membangunnya sendiri.
+var guideNodes=[], guideEdges=[];
+function guideNode(type,x,y){
+  var n={id:'gd'+guideNodes.length+'_'+(Math.random()*9999|0),type:type,x:x,y:y};
+  guideNodes.push(n);
+  return n;
+}
+function guideEdge(a,b,type){
+  guideEdges.push({a:a.id,b:b.id,type:type});
+}
 
 var CABLE_COLORS={straight:'#00E5D1',cross:'#FF6B1A',serial:'#B14EFF',fiber:'#2EFF8B',console:'#FFE134'};
 var CABLE_DASH={straight:[],cross:[8,4],serial:[],fiber:[],console:[3,3]};
@@ -531,29 +620,24 @@ function resize(){
 window.addEventListener('resize',resize);
 setTimeout(resize,50);
 
-function setMode(m,btn){
-  mode=m; linkFrom=null;
-  document.querySelectorAll('#topbar .btn').forEach(function(b){b.classList.remove('on')});
-  btn.classList.add('on');
-  if(m==='select') devType=null;
-  document.querySelectorAll('.dev-btn').forEach(function(b){b.classList.remove('on')});
-  infoMode();draw();
-}
 function setCable(t,el){
   cableType=t;
+  mode='cable'; linkFrom=null; devType=null;
   document.querySelectorAll('.ctype').forEach(function(b){b.classList.remove('on')});
   el.classList.add('on');
+  document.querySelectorAll('.dev-btn').forEach(function(b){b.classList.remove('on')});
   document.getElementById('info-cable').textContent='Kabel: '+CABLE_NAMES[t];
+  infoMode();
+  draw();
 }
 function pickDev(type,btn){
-  devType=type; mode='place';
+  devType=type; mode='place'; linkFrom=null;
   document.querySelectorAll('.dev-btn').forEach(function(b){b.classList.remove('on')});
   btn.classList.add('on');
-  document.querySelectorAll('#topbar .btn').forEach(function(b){b.classList.remove('on')});
   infoMode();
 }
 function infoMode(){
-  var m=mode==='place'?'Klik kanvas untuk letakkan '+devType:mode==='cable'?'Kabel: klik 2 perangkat':'Pilih/Drag perangkat';
+  var m=mode==='place'?('Klik kanvas untuk letakkan '+devType+' (klik objek untuk pilih)'):'Klik 2 perangkat untuk hubungkan kabel (klik objek untuk pilih/geser)';
   document.getElementById('info-mode').textContent='Mode: '+m;
 }
 
@@ -563,6 +647,73 @@ function nodeAt(x,y){
     if(Math.hypot(x-n.x,y-n.y)<=DEV_SIZE/2+6) return n;
   }
   return null;
+}
+
+// ---- Cable (edge) hit-testing & endpoint handles ----
+function distToSeg(px,py,ax,ay,bx,by){
+  var vx=bx-ax, vy=by-ay, wx=px-ax, wy=py-ay;
+  var len2=vx*vx+vy*vy;
+  var t=len2>0?Math.max(0,Math.min(1,(wx*vx+wy*vy)/len2)):0;
+  var cx=ax+t*vx, cy=ay+t*vy;
+  return Math.hypot(px-cx,py-cy);
+}
+function edgeAt(x,y){
+  var best=null,bestD=9;
+  edges.forEach(function(e){
+    var a=nodes.find(function(n){return n.id===e.a});
+    var b=nodes.find(function(n){return n.id===e.b});
+    if(!a||!b) return;
+    var d=distToSeg(x,y,a.x,a.y,b.x,b.y);
+    if(d<bestD){bestD=d;best=e;}
+  });
+  return best;
+}
+function handleAt(edge,x,y){
+  var a=nodes.find(function(n){return n.id===edge.a});
+  var b=nodes.find(function(n){return n.id===edge.b});
+  if(a&&Math.hypot(x-a.x,y-a.y)<=12) return 'a';
+  if(b&&Math.hypot(x-b.x,y-b.y)<=12) return 'b';
+  return null;
+}
+function handleCableTap(hitNode){
+  if(!linkFrom){
+    linkFrom=hitNode;
+    document.getElementById('info-tip').textContent='Dari '+hitNode.label+' — klik perangkat tujuan';
+    draw();
+  } else if(linkFrom.id!==hitNode.id){
+    var dup=edges.find(function(ed){return (ed.a===linkFrom.id&&ed.b===hitNode.id)||(ed.a===hitNode.id&&ed.b===linkFrom.id)});
+    if(!dup){
+      edges.push({id:'e'+(Date.now()+(Math.random()*9999|0)),a:linkFrom.id,b:hitNode.id,type:cableType});
+      document.getElementById('info-tip').textContent='Kabel '+CABLE_NAMES[cableType]+' dibuat!';
+    } else {
+      document.getElementById('info-tip').textContent='Koneksi sudah ada!';
+    }
+    linkFrom=null;
+    updateInfo();draw();
+  } else {
+    linkFrom=null;
+    draw();
+  }
+}
+function finishDragEdgeHandle(x,y){
+  var d=dragEdgeHandle;
+  dragEdgeHandle=null;
+  if(!d) return;
+  var edge=d.edge;
+  var otherId=d.end==='a'?edge.b:edge.a;
+  var target=nodeAt(x,y);
+  if(target&&target.id!==otherId){
+    var dup=edges.some(function(ed){return ed!==edge&&((ed.a===otherId&&ed.b===target.id)||(ed.a===target.id&&ed.b===otherId))});
+    if(dup){
+      document.getElementById('info-tip').textContent='Koneksi ke perangkat itu sudah ada!';
+    } else {
+      edge[d.end]=target.id;
+      document.getElementById('info-tip').textContent='Kabel dipindahkan ke '+target.label+'.';
+    }
+  } else {
+    document.getElementById('info-tip').textContent='Dibatalkan — lepas tepat di atas perangkat tujuan untuk memindahkan kabel.';
+  }
+  updateInfo();draw();
 }
 
 function addNode(type,x,y){
@@ -579,81 +730,148 @@ function updateInfo(){
   document.getElementById('info-edges').textContent='Koneksi: '+edges.length;
 }
 
+// Klik objek apa pun (perangkat atau kabel) langsung memilihnya, di mode manapun.
+// Tap singkat pada perangkat saat mode kabel aktif = buat/hubungkan kabel.
+// Tahan & geser perangkat = pindahkan posisi. Kabel terpilih menampilkan 2 gagang
+// di ujungnya yang bisa digeser ke perangkat lain untuk memindahkan sambungan.
 cv.addEventListener('pointerdown',function(e){
   e.preventDefault();
   var r=cv.getBoundingClientRect();
   var x=e.clientX-r.left, y=e.clientY-r.top;
-  var hit=nodeAt(x,y);
 
-  if(mode==='place'&&devType){
-    if(!hit){ addNode(devType,x,y); return; }
+  // Prioritas 0: menggeser gagang kabel yang sedang terpilih
+  if(sel&&sel.type==='edge'){
+    var h=handleAt(sel.obj,x,y);
+    if(h){
+      dragEdgeHandle={edge:sel.obj,end:h,curX:x,curY:y};
+      cv.setPointerCapture(e.pointerId);
+      draw();
+      return;
+    }
   }
 
-  if(mode==='cable'){
-    if(hit){
-      if(!linkFrom){
-        linkFrom=hit;
-        document.getElementById('info-tip').textContent='Dari '+hit.label+' — klik perangkat tujuan';
-        draw();
-      } else if(linkFrom.id!==hit.id){
-        // prevent duplicate
-        var dup=edges.find(function(ed){return (ed.a===linkFrom.id&&ed.b===hit.id)||(ed.a===hit.id&&ed.b===linkFrom.id)});
-        if(!dup){
-          edges.push({a:linkFrom.id,b:hit.id,type:cableType});
-          document.getElementById('info-tip').textContent='Kabel '+CABLE_NAMES[cableType]+' dibuat!';
-        } else {
-          document.getElementById('info-tip').textContent='Koneksi sudah ada!';
-        }
-        linkFrom=null;
-        updateInfo();draw();
-      }
-    } else { linkFrom=null; draw(); }
+  var hitNode=nodeAt(x,y);
+  var hitEdge=!hitNode?edgeAt(x,y):null;
+
+  // Prioritas 1: klik perangkat -> otomatis terpilih + siap digeser
+  if(hitNode){
+    sel={type:'node',obj:hitNode};
+    dragNode=hitNode; didMove=false;
+    dragSX=e.clientX; dragSY=e.clientY; nSX=hitNode.x; nSY=hitNode.y;
+    cv.setPointerCapture(e.pointerId);
+    draw();
     return;
   }
 
-  if(mode==='select'){
-    if(hit){
-      sel=hit; dragNode=hit; didMove=false;
-      dragSX=e.clientX; dragSY=e.clientY; nSX=hit.x; nSY=hit.y;
-      cv.setPointerCapture(e.pointerId);
-      draw();
-    } else { sel=null; draw(); }
+  // Prioritas 2: klik kabel -> otomatis terpilih (gagang ujung muncul)
+  if(hitEdge){
+    sel={type:'edge',obj:hitEdge};
+    linkFrom=null;
+    draw();
+    return;
   }
+
+  // Prioritas 3: klik area kosong
+  if(mode==='place'&&devType){
+    var nn=addNode(devType,x,y);
+    sel={type:'node',obj:nn};
+    draw();
+    return;
+  }
+  if(mode==='cable'&&linkFrom){
+    linkFrom=null;
+    document.getElementById('info-tip').textContent='Pembuatan kabel dibatalkan.';
+  }
+  sel=null;
+  draw();
 });
 
 cv.addEventListener('pointermove',function(e){
   var r=cv.getBoundingClientRect();
   var x=e.clientX-r.left, y=e.clientY-r.top;
+
+  if(dragEdgeHandle){
+    dragEdgeHandle.curX=x; dragEdgeHandle.curY=y;
+    cv.style.cursor='grabbing';
+    draw(); return;
+  }
   if(dragNode){
     var dx=e.clientX-dragSX, dy=e.clientY-dragSY;
     if(Math.abs(dx)>3||Math.abs(dy)>3) didMove=true;
     dragNode.x=Math.max(20,Math.min(cv.width-20,nSX+dx));
     dragNode.y=Math.max(20,Math.min(cv.height-20,nSY+dy));
+    cv.style.cursor='grabbing';
     draw(); return;
   }
+
   var hit=nodeAt(x,y);
   if(hit){
     var conn=edges.filter(function(ed){return ed.a===hit.id||ed.b===hit.id});
     tooltip.style.display='block';
     tooltip.style.left=(hit.x+22)+'px'; tooltip.style.top=(hit.y-18)+'px';
     tooltip.textContent=hit.label+' | '+conn.length+' koneksi';
-  } else { tooltip.style.display='none'; }
+    cv.style.cursor='pointer';
+    return;
+  }
+  var he=edgeAt(x,y);
+  if(he){
+    tooltip.style.display='block';
+    tooltip.style.left=(x+14)+'px'; tooltip.style.top=(y-18)+'px';
+    tooltip.textContent='Kabel '+CABLE_NAMES[he.type]+' — klik untuk pilih';
+    cv.style.cursor='pointer';
+    return;
+  }
+  tooltip.style.display='none';
+  cv.style.cursor='crosshair';
 });
 
-cv.addEventListener('pointerup',function(){dragNode=null});
+cv.addEventListener('pointerup',function(e){
+  var r=cv.getBoundingClientRect();
+  var x=e.clientX-r.left, y=e.clientY-r.top;
+
+  if(dragEdgeHandle){
+    finishDragEdgeHandle(x,y);
+    cv.style.cursor='crosshair';
+    return;
+  }
+  if(dragNode){
+    var wasTap=!didMove;
+    var tappedNode=dragNode;
+    dragNode=null;
+    cv.style.cursor='crosshair';
+    if(wasTap&&mode==='cable'){ handleCableTap(tappedNode); }
+  }
+});
 
 function deleteSelected(){
   if(!sel) return;
-  edges=edges.filter(function(e){return e.a!==sel.id&&e.b!==sel.id});
-  nodes=nodes.filter(function(n){return n.id!==sel.id});
+  if(sel.type==='node'){
+    var id=sel.obj.id;
+    edges=edges.filter(function(e){return e.a!==id&&e.b!==id});
+    nodes=nodes.filter(function(n){return n.id!==id});
+  } else if(sel.type==='edge'){
+    edges=edges.filter(function(e){return e!==sel.obj;});
+  }
   sel=null; updateInfo(); draw();
 }
 
+// Delete/Backspace menghapus objek terpilih; Escape membatalkan pilihan/kabel yang sedang dibuat
+window.addEventListener('keydown',function(e){
+  var tag=(document.activeElement&&document.activeElement.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA') return;
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(sel){ e.preventDefault(); deleteSelected(); }
+  } else if(e.key==='Escape'){
+    sel=null; linkFrom=null; draw();
+  }
+});
+
 function clearAll(){
-  nodes=[];edges=[];sel=null;linkFrom=null;cnt={router:0,switch:0,hub:0,pc:0,server:0,laptop:0,cloud:0,phone:0};
+  nodes=[];edges=[];sel=null;linkFrom=null;dragEdgeHandle=null;cnt={router:0,switch:0,hub:0,pc:0,server:0,laptop:0,cloud:0,phone:0};
   simHighlight={};
+  closeTopoGuide(true);
   updateInfo();draw();
-  document.getElementById('info-tip').textContent='Klik sidebar untuk tambah perangkat';
+  document.getElementById('info-tip').textContent='Klik sidebar untuk tambah perangkat, atau klik objek untuk memilihnya';
 }
 
 function draw(){
@@ -664,11 +882,25 @@ function draw(){
   ctx.fillStyle='rgba(10,10,10,0.12)';
   for(var gx=0;gx<cv.width;gx+=30) for(var gy=0;gy<cv.height;gy+=30) ctx.fillRect(gx,gy,2,2);
 
+  drawGuideLayer();
+
   edges.forEach(function(e){
     var a=nodes.find(function(n){return n.id===e.a});
     var b=nodes.find(function(n){return n.id===e.b});
     if(!a||!b) return;
+    var isSelEdge=sel&&sel.type==='edge'&&sel.obj===e;
     ctx.save();
+    if(isSelEdge){
+      // halo di belakang kabel yang sedang terpilih
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='#FF3D9A';
+      ctx.lineWidth=(CABLE_W[e.type]||2)+6;
+      ctx.setLineDash([]);
+      ctx.globalAlpha=0.35;
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
     ctx.beginPath();
     ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
     // highlight erroneous edges in red
@@ -685,13 +917,92 @@ function draw(){
     ctx.fillStyle=edgeErr?'#FF3D9A':CABLE_COLORS[e.type];
     ctx.fillText(e.type,mx,my);
     ctx.restore();
+    if(isSelEdge){
+      drawEdgeHandle(a.x,a.y,dragEdgeHandle&&dragEdgeHandle.end==='a');
+      drawEdgeHandle(b.x,b.y,dragEdgeHandle&&dragEdgeHandle.end==='b');
+    }
   });
 
+  // Garis "hantu" saat menggeser ujung kabel ke perangkat lain
+  if(dragEdgeHandle){
+    var oid=dragEdgeHandle.end==='a'?dragEdgeHandle.edge.b:dragEdgeHandle.edge.a;
+    var other=nodes.find(function(n){return n.id===oid;});
+    if(other){
+      ctx.save();
+      ctx.setLineDash([6,3]);
+      ctx.strokeStyle='#FF3D9A';
+      ctx.lineWidth=2.5;
+      ctx.beginPath();
+      ctx.moveTo(other.x,other.y);
+      ctx.lineTo(dragEdgeHandle.curX,dragEdgeHandle.curY);
+      ctx.stroke();
+      ctx.restore();
+      var target=nodeAt(dragEdgeHandle.curX,dragEdgeHandle.curY);
+      if(target&&target.id!==oid){
+        ctx.save();
+        ctx.beginPath();ctx.arc(target.x,target.y,DEV_SIZE/2+12,0,Math.PI*2);
+        ctx.strokeStyle='#2EFF8B';ctx.lineWidth=3;ctx.setLineDash([]);ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
   nodes.forEach(function(n){
-    var isSel=sel&&sel.id===n.id;
+    var isSel=sel&&sel.type==='node'&&sel.obj.id===n.id;
     var isLink=linkFrom&&linkFrom.id===n.id;
     drawDevice(ctx,n,isSel,isLink);
   });
+
+  var delBtn=document.getElementById('btn-del');
+  if(delBtn){
+    delBtn.disabled=!sel;
+    delBtn.textContent=sel?('✕ Hapus '+(sel.type==='edge'?'Kabel':'Perangkat')):'✕ Hapus';
+  }
+}
+
+function drawEdgeHandle(x,y,active){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x,y,7,0,Math.PI*2);
+  ctx.fillStyle=active?'#FF3D9A':'#fffef5';
+  ctx.fill();
+  ctx.strokeStyle='#0a0a0a';
+  ctx.lineWidth=2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawGuideLayer(){
+  if(!guideNodes.length) return;
+  ctx.save();
+  ctx.globalAlpha=0.22;
+  guideEdges.forEach(function(e){
+    var a=guideNodes.find(function(n){return n.id===e.a});
+    var b=guideNodes.find(function(n){return n.id===e.b});
+    if(!a||!b) return;
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=CABLE_COLORS[e.type]||'#888';
+    ctx.lineWidth=CABLE_W[e.type]||2;
+    ctx.setLineDash([5,4]);
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  guideNodes.forEach(function(n){
+    ctx.save();
+    ctx.translate(n.x,n.y);
+    var t=n.type;
+    if(t==='router') drawRouter(ctx);
+    else if(t==='switch') drawSwitch(ctx);
+    else if(t==='hub') drawHub(ctx);
+    else if(t==='pc') drawPC(ctx);
+    else if(t==='server') drawServer(ctx);
+    else if(t==='laptop') drawLaptop(ctx);
+    else if(t==='cloud') drawCloud(ctx);
+    else if(t==='phone') drawPhone(ctx);
+    ctx.restore();
+  });
+  ctx.restore();
 }
 
 function drawDevice(ctx,n,isSel,isLink){
@@ -809,91 +1120,269 @@ drawSidebarIcons();
 
 function loadDemo(type){
   clearAll();
+  currentTopoType=type;
+  showTopoGuide(type);
+  showTip('📘 Klik ikon "Panduan" di pojok kiri atas untuk lihat contoh gambar & penjelasan topologi ini.');
+}
+
+// Membangun geometri contoh topologi (gambar semi-transparan di kanvas).
+// Hanya dipanggil saat panel Panduan dibuka, supaya gambar & teks jadi satu kesatuan.
+function buildGuideLayer(type){
+  guideNodes=[];guideEdges=[];
   var W=cv.width||500, H=cv.height||350;
   if(type==='star'){
-    // Star: 1 switch di tengah, semua perangkat konek ke switch pakai straight-through
-    // Router ke switch = straight-through (✓)
-    // PC/Server/Laptop ke switch = straight-through (✓)
-    var sw=addNode('switch',W*.5,H*.45);
-    var router=addNode('router',W*.5,H*.1);
-    edges.push({a:sw.id,b:router.id,type:'straight'}); // switch-router: straight ✓
+    // Star: panduan posisi 1 switch di tengah + router + end device
+    var sw=guideNode('switch',W*.5,H*.45);
+    var router=guideNode('router',W*.5,H*.1);
+    guideEdge(sw,router,'straight');
     [['pc',W*.82,H*.27],['pc',W*.86,H*.62],['server',W*.5,H*.84],['pc',W*.14,H*.62],['laptop',W*.18,H*.27]].forEach(function(d){
-      var nd=addNode(d[0],d[1],d[2]);
-      edges.push({a:sw.id,b:nd.id,type:'straight'}); // switch-enddevice: straight ✓
+      var nd=guideNode(d[0],d[1],d[2]);
+      guideEdge(sw,nd,'straight');
     });
 
   } else if(type==='bus'){
-    // Bus Klasik: semua PC langsung berjejer di satu kabel backbone
-    // Tidak ada switch/hub — PC konek langsung ke PC berikutnya
-    // PC-to-PC langsung: Crossover ✓ (simulasi kabel koaksial backbone)
+    // Bus: panduan posisi PC berjejer di satu jalur backbone
     var busY=H*.5;
     var devTypes=[['pc',W*.08],['laptop',W*.22],['pc',W*.36],['server',W*.5],['pc',W*.64],['laptop',W*.78],['pc',W*.92]];
-    var busnodes=devTypes.map(function(d){return addNode(d[0],d[1],busY);});
-    // Hubungkan berurutan pakai crossover (PC-to-PC langsung) ✓
+    var busnodes=devTypes.map(function(d){return guideNode(d[0],d[1],busY);});
     for(var i=0;i<busnodes.length-1;i++){
-      edges.push({a:busnodes[i].id,b:busnodes[i+1].id,type:'cross'});
+      guideEdge(busnodes[i],busnodes[i+1],'cross');
     }
 
   } else if(type==='ring'){
-    // Ring: router saling konek membentuk lingkaran pakai serial DCE (WAN link antar router)
-    // Setiap router punya switch lokal, device konek ke switch pakai straight-through
+    // Ring: panduan posisi router melingkar + switch & end device lokal
     var rCount=4;
     var Rr=Math.min(W,H)*.28;
     var rs=[], sws=[];
     for(var i=0;i<rCount;i++){
       var a=(2*Math.PI*i/rCount)-Math.PI/2;
       var rx=W*.5+Rr*Math.cos(a), ry=H*.47+Rr*Math.sin(a);
-      rs.push(addNode('router',rx,ry));
-      // Switch lokal sedikit lebih ke luar dari router
+      rs.push(guideNode('router',rx,ry));
       var swx=W*.5+(Rr+52)*Math.cos(a), swy=H*.47+(Rr+52)*Math.sin(a);
-      sws.push(addNode('switch',swx,swy));
+      sws.push(guideNode('switch',swx,swy));
     }
-    // Ring backbone: router-to-router pakai serial DCE (WAN link) ✓
-    rs.forEach(function(n,i){edges.push({a:n.id,b:rs[(i+1)%rs.length].id,type:'serial'})});
-    // Router ke switch lokalnya: straight-through ✓
-    rs.forEach(function(n,i){edges.push({a:n.id,b:sws[i].id,type:'straight'})});
-    // End device ke switch lokal: straight-through ✓
+    rs.forEach(function(n,i){guideEdge(n,rs[(i+1)%rs.length],'serial')});
+    rs.forEach(function(n,i){guideEdge(n,sws[i],'straight')});
     var endDevs=[['pc',W*.5,H*.04],['pc',W*.95,H*.47],['server',W*.5,H*.9],['laptop',W*.05,H*.47]];
     endDevs.forEach(function(d,i){
-      var nd=addNode(d[0],d[1],d[2]);
-      edges.push({a:sws[i].id,b:nd.id,type:'straight'});
+      var nd=guideNode(d[0],d[1],d[2]);
+      guideEdge(sws[i],nd,'straight');
     });
 
   } else if(type==='mesh'){
-    // Full Mesh: semua router saling terhubung langsung pakai serial DCE (WAN link) ✓
-    // PC/Server tidak langsung ke router — lewat switch lokal (more realistic)
-    // Switch ke router: straight-through ✓ | PC/Server ke switch: straight-through ✓
-    var Rs=Math.min(W,H)*.29;
+    // Full Mesh: panduan posisi router saling silang + switch/end device lokal
     var routerPositions=[
-      [W*.5, H*.1],   // atas
-      [W*.85,H*.38],  // kanan atas
-      [W*.72,H*.82],  // kanan bawah
-      [W*.28,H*.82],  // kiri bawah
-      [W*.15,H*.38]   // kiri atas
+      [W*.5, H*.1],
+      [W*.85,H*.38],
+      [W*.72,H*.82],
+      [W*.28,H*.82],
+      [W*.15,H*.38]
     ];
-    var rs=routerPositions.map(function(p){return addNode('router',p[0],p[1]);});
-    // Full mesh: setiap router konek ke semua router lain pakai serial DCE ✓
+    var rs=routerPositions.map(function(p){return guideNode('router',p[0],p[1]);});
     for(var i=0;i<rs.length;i++){
       for(var j=i+1;j<rs.length;j++){
-        edges.push({a:rs[i].id,b:rs[j].id,type:'serial'});
+        guideEdge(rs[i],rs[j],'serial');
       }
     }
-    // Tiap router punya switch lokal + 1 end device
     var localDevs=[
-      ['pc',    W*.5,  H*.92],  // bawah router atas
-      ['server',W*.97, H*.6 ],  // kanan router kanan-atas
-      ['laptop',W*.88, H*.1 ],  // atas router kanan-bawah
-      ['pc',    W*.12, H*.1 ],  // atas router kiri-bawah
-      ['server',W*.03, H*.6 ]   // kiri router kiri-atas
+      ['pc',    W*.5,  H*.92],
+      ['server',W*.97, H*.6 ],
+      ['laptop',W*.88, H*.1 ],
+      ['pc',    W*.12, H*.1 ],
+      ['server',W*.03, H*.6 ]
     ];
     localDevs.forEach(function(d,i){
-      var sw=addNode('switch',(routerPositions[i][0]+d[1])/2,(routerPositions[i][1]+d[2])/2);
-      var nd=addNode(d[0],d[1],d[2]);
-      edges.push({a:rs[i].id,b:sw.id,type:'straight'}); // router-switch: straight ✓
-      edges.push({a:sw.id, b:nd.id, type:'straight'});  // switch-device: straight ✓
+      var sw=guideNode('switch',(routerPositions[i][0]+d[1])/2,(routerPositions[i][1]+d[2])/2);
+      var nd=guideNode(d[0],d[1],d[2]);
+      guideEdge(rs[i],sw,'straight');
+      guideEdge(sw,nd,'straight');
     });
+  } else if(type==='hybrid'){
+    // Hybrid: panduan posisi backbone switch + cluster star per switch + router gateway
+    var busY=H*.18;
+    var swPositions=[[W*.22,busY],[W*.5,busY],[W*.78,busY]];
+    var sws=swPositions.map(function(p){return guideNode('switch',p[0],p[1]);});
+    for(var i=0;i<sws.length-1;i++){
+      guideEdge(sws[i],sws[i+1],'cross');
+    }
+    var clusters=[
+      [['pc',W*.08,H*.45],['pc',W*.22,H*.6],['laptop',W*.36,H*.45]],
+      [['server',W*.44,H*.45],['pc',W*.56,H*.45]],
+      [['pc',W*.64,H*.45],['laptop',W*.78,H*.6],['pc',W*.92,H*.45]]
+    ];
+    clusters.forEach(function(cl,i){
+      cl.forEach(function(d){
+        var nd=guideNode(d[0],d[1],d[2]);
+        guideEdge(sws[i],nd,'straight');
+      });
+    });
+    var router=guideNode('router',W*.5,H*.88);
+    guideEdge(sws[1],router,'straight');
   }
-  updateInfo();draw();
+  draw();
+}
+
+// ============================================================
+// PANDUAN TEKS PER JENIS TOPOLOGI
+// (perangkat yang dibutuhkan + aturan kabel — sesuai contoh panduan di kanvas)
+// ============================================================
+var TOPO_INFO={
+  star:{
+    icon:'★', name:'Topologi Bintang (Star)',
+    desc:'Semua perangkat akhir terhubung ke satu titik pusat (switch), lalu switch terhubung ke router sebagai gateway.',
+    devices:[
+      {count:'1',label:'Switch',note:'pusat jaringan'},
+      {count:'1',label:'Router',note:'gateway ke internet/WAN'},
+      {count:'4–6',label:'PC / Laptop / Server',note:'perangkat akhir (end device)'}
+    ],
+    cables:[
+      {type:'straight',rule:'End device (PC/Laptop/Server) ⟷ Switch'},
+      {type:'straight',rule:'Switch ⟷ Router'}
+    ],
+    tips:'Jika kabel ke 1 end device putus, hanya perangkat itu yang terputus. Tapi kalau Switch mati, seluruh jaringan ikut down (Single Point of Failure).'
+  },
+  bus:{
+    icon:'≡', name:'Topologi Bus',
+    desc:'Semua perangkat akhir dihubungkan berurutan (daisy-chain) membentuk satu jalur backbone tunggal, tanpa switch/hub.',
+    devices:[
+      {count:'6–8',label:'PC / Laptop / Server',note:'dihubungkan berjejer satu sama lain'}
+    ],
+    cables:[
+      {type:'cross',rule:'End device ⟷ End device berikutnya (langsung, tanpa switch)'}
+    ],
+    tips:'Hemat kabel karena tanpa switch, tapi kalau salah satu titik/kabel di tengah putus, jalur backbone ikut terbagi dan komunikasi bisa terganggu.'
+  },
+  ring:{
+    icon:'◯', name:'Topologi Ring',
+    desc:'Beberapa router membentuk lingkaran tertutup (setiap router terhubung ke 2 router tetangganya), masing-masing punya switch & end device lokal sendiri.',
+    devices:[
+      {count:'4',label:'Router',note:'membentuk lingkaran/ring'},
+      {count:'4',label:'Switch',note:'1 per router, akses lokal'},
+      {count:'4',label:'PC / Laptop / Server',note:'1 per switch'}
+    ],
+    cables:[
+      {type:'serial',rule:'Router ⟷ Router tetangga (membentuk lingkaran)'},
+      {type:'straight',rule:'Router ⟷ Switch lokal'},
+      {type:'straight',rule:'Switch ⟷ End device'}
+    ],
+    tips:'Data bisa mengalir dua arah mengelilingi ring, jadi 1 link putus biasanya masih bisa dilewati dari arah sebaliknya — lebih tahan gangguan dibanding Bus.'
+  },
+  mesh:{
+    icon:'⬡', name:'Topologi Mesh (Full Mesh)',
+    desc:'Setiap router saling terhubung langsung ke semua router lain, masing-masing punya switch & end device lokal sendiri.',
+    devices:[
+      {count:'5',label:'Router',note:'saling terhubung penuh (n×(n-1)/2 link)'},
+      {count:'5',label:'Switch',note:'1 per router, akses lokal'},
+      {count:'5',label:'PC / Laptop / Server',note:'1 per switch'}
+    ],
+    cables:[
+      {type:'serial',rule:'Router ⟷ Router lain (setiap pasang router)'},
+      {type:'straight',rule:'Router ⟷ Switch lokal'},
+      {type:'straight',rule:'Switch ⟷ End device'}
+    ],
+    tips:'Paling tahan gangguan karena banyak jalur redundan, tapi paling boros kabel/port — jumlah link naik cepat seiring bertambahnya router.'
+  },
+  hybrid:{
+    icon:'⬢', name:'Topologi Hybrid',
+    desc:'Gabungan Bus + Star: beberapa switch backbone dirangkai berjejer, masing-masing switch punya klaster end device sendiri (seperti mini-star), dan 1 switch terhubung ke router sebagai gateway.',
+    devices:[
+      {count:'3',label:'Switch',note:'backbone, dirangkai berjejer'},
+      {count:'1',label:'Router',note:'gateway, tersambung ke salah satu switch backbone'},
+      {count:'7–8',label:'PC / Laptop / Server',note:'tersebar di tiap klaster switch'}
+    ],
+    cables:[
+      {type:'cross',rule:'Switch backbone ⟷ Switch backbone berikutnya'},
+      {type:'straight',rule:'Switch ⟷ End device dalam klaster'},
+      {type:'straight',rule:'Switch ⟷ Router'}
+    ],
+    tips:'Menggabungkan kelebihan beberapa topologi — cocok untuk jaringan sekolah/kantor dengan beberapa ruangan/klaster yang tetap butuh 1 gateway bersama.'
+  }
+};
+
+var topoGuideOpen=false;
+var currentTopoType=null;
+
+// Panel panduan bisa digeser bebas biar tidak nutupin gambar topologi di kanvas
+(function(){
+  var panel=document.getElementById('topo-guide');
+  var head=document.getElementById('topo-guide-head');
+  var wrap=document.getElementById('canvas-wrap');
+  var dragging=false, offX=0, offY=0;
+  head.addEventListener('pointerdown',function(e){
+    if(e.target.closest('#topo-guide-close')) return;
+    dragging=true;
+    var pr=panel.getBoundingClientRect();
+    offX=e.clientX-pr.left; offY=e.clientY-pr.top;
+    panel.classList.add('dragging');
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove',function(e){
+    if(!dragging) return;
+    var wr=wrap.getBoundingClientRect();
+    var x=e.clientX-wr.left-offX;
+    var y=e.clientY-wr.top-offY;
+    var maxX=wr.width-panel.offsetWidth;
+    var maxY=wr.height-panel.offsetHeight;
+    x=Math.max(0,Math.min(x,maxX));
+    y=Math.max(0,Math.min(y,maxY));
+    panel.style.left=x+'px';
+    panel.style.top=y+'px';
+  });
+  function stopDrag(){ dragging=false; panel.classList.remove('dragging'); }
+  head.addEventListener('pointerup',stopDrag);
+  head.addEventListener('pointercancel',stopDrag);
+})();
+
+function closeTopoGuide(hideToggle){
+  topoGuideOpen=false;
+  guideNodes=[];guideEdges=[]; // kanvas otomatis bersih dari contoh transparan
+  var p=document.getElementById('topo-guide');
+  if(p) p.classList.remove('open');
+  var t=document.getElementById('topo-guide-toggle');
+  if(t) t.classList.remove('on');
+  if(hideToggle){
+    currentTopoType=null;
+    if(t) t.style.display='none';
+  }
+  draw();
+}
+function toggleTopoGuide(){
+  if(!currentTopoType) return;
+  topoGuideOpen=!topoGuideOpen;
+  document.getElementById('topo-guide').classList.toggle('open',topoGuideOpen);
+  document.getElementById('topo-guide-toggle').classList.toggle('on',topoGuideOpen);
+  if(topoGuideOpen){
+    buildGuideLayer(currentTopoType); // tampilkan gambar semi-transparan bareng panel teks
+  } else {
+    guideNodes=[];guideEdges=[]; // ditutup -> kanvas otomatis bersih
+    draw();
+  }
+}
+function showTopoGuide(type){
+  var info=TOPO_INFO[type];
+  var panel=document.getElementById('topo-guide');
+  var toggle=document.getElementById('topo-guide-toggle');
+  if(!info||!panel) return;
+  currentTopoType=type;
+  toggle.textContent='📘 Panduan '+info.icon;
+  toggle.style.display='inline-flex';
+  document.getElementById('topo-guide-title').textContent=info.icon+' '+info.name;
+  var html='<div class="tg-desc">'+info.desc+'</div>';
+  html+='<div class="tg-sub">🖥️ Perangkat Dibutuhkan</div><ul class="tg-list">';
+  info.devices.forEach(function(d){
+    html+='<li><b>'+d.count+'×</b>&nbsp;'+d.label+(d.note?' <span class="tg-note">— '+d.note+'</span>':'')+'</li>';
+  });
+  html+='</ul>';
+  html+='<div class="tg-sub">🔌 Kabel yang Dipakai</div><ul class="tg-list">';
+  info.cables.forEach(function(c){
+    html+='<li><span class="tg-swatch" style="background:'+CABLE_COLORS[c.type]+'"></span><span><b>'+CABLE_NAMES[c.type]+'</b> — '+c.rule+'</span></li>';
+  });
+  html+='</ul>';
+  if(info.tips) html+='<div class="tg-tip">💡 '+info.tips+'</div>';
+  document.getElementById('topo-guide-body').innerHTML=html;
+  // panel tetap tersembunyi secara default — cukup ikon 📘 yang muncul,
+  // supaya kanvas tidak tertutup. Kalau panel sedang dibuka user, konten diperbarui saja.
+  panel.classList.toggle('open',topoGuideOpen);
 }
 
 // ============================================================
@@ -1126,7 +1615,9 @@ function renderSimResult(r){
 
   // Summary card
   html+='<div class="sim-summary">';
-  html+='<div class="sim-summary-score '+scoreClass+'">'+score+'</div>';
+  // DINONAKTIFKAN SEMENTARA: tampilan skor kesehatan (angka) hasil simulasi AI
+  // Belum dibutuhkan sekarang, kemungkinan dipakai lagi di masa mendatang.
+  // html+='<div class="sim-summary-score '+scoreClass+'">'+score+'</div>';
   html+='<div class="sim-summary-meta">';
   html+='<div class="topo-name">'+escH(r.topology_type||'Tidak Diketahui')+' '+statusBadge+'</div>';
   html+='<div class="topo-desc">'+escH(r.topology_desc||'')+'</div>';
@@ -1193,14 +1684,14 @@ function saveApiKey(val){
   try{ localStorage.setItem('netsim_apikey', _apiKey); } catch(e){}
 }
 
-setMode('cable',document.getElementById('btn-cable'));
+infoMode();
 loadDemo('star');
 </script>
 <!-- GUIDED TOUR OVERLAY -->
 <div id="tour-overlay"></div>
 <div id="tour-spotlight" style="display:none"></div>
 <div id="tour-card" style="display:none">
-  <div class="tour-step-count" id="tour-step-label">LANGKAH 1 / 7</div>
+  <div class="tour-step-count" id="tour-step-label">LANGKAH 1 / 6</div>
   <div id="tour-progress"></div>
   <h4 id="tour-title">Selamat Datang!</h4>
   <p id="tour-desc">Deskripsi langkah.</p>
@@ -1239,43 +1730,30 @@ var TOUR_STEPS=[
   },
   {
     target:'#cable-bar',
-    title:'2️⃣ Pilih Jenis Kabel',
-    desc:'Sebelum menghubungkan perangkat, pilih jenis kabel yang sesuai:\n• Straight-through → PC/Server ke Switch\n• Crossover → PC ke PC langsung\n• Serial DCE → Router ke Router (WAN)\n• Fiber → ke Cloud/ISP',
+    title:'2️⃣ Pilih Jenis Kabel = Langsung Mode Hubungkan',
+    desc:'Klik jenis kabel yang sesuai, kamu otomatis masuk mode hubungkan:\n• Straight-through → PC/Server ke Switch\n• Crossover → PC ke PC langsung\n• Serial DCE → Router ke Router (WAN)\n• Fiber → ke Cloud/ISP\nSetelah itu klik perangkat pertama → klik perangkat kedua. Kabel terbentuk otomatis!',
     pos:'bottom',
     action:null
   },
   {
-    target:'#btn-cable',
-    title:'3️⃣ Mode Kabel (Hubungkan)',
-    desc:'Pastikan tombol "⏤ KABEL" aktif (warna cyan). Lalu klik perangkat pertama → klik perangkat kedua. Kabel akan terbentuk otomatis!',
+    target:'#btn-del',
+    title:'3️⃣ Klik Objek = Otomatis Terpilih',
+    desc:'Tidak perlu tombol khusus — klik langsung perangkat ATAU kabel di kanvas untuk memilihnya:\n• Klik perangkat → tahan & geser untuk memindahkan posisinya\n• Klik kabel → muncul 2 gagang di ujungnya, geser gagang itu ke perangkat lain untuk memindahkan sambungan\n• Objek terpilih bisa dihapus lewat tombol "✕ HAPUS" (atau tombol Delete di keyboard)',
     pos:'bottom',
-    action:{label:'Aktifkan Mode Kabel', fn:function(){
-      var btn=document.getElementById('btn-cable');
-      setMode('cable',btn);
-    }}
-  },
-  {
-    target:'#btn-select',
-    title:'4️⃣ Mode Pilih & Drag',
-    desc:'Klik "▶ PILIH" untuk masuk mode seleksi. Di sini kamu bisa:\n• Klik perangkat → lalu tekan "✕ HAPUS" untuk menghapus\n• Drag (tahan & geser) perangkat untuk memindahkan posisinya',
-    pos:'bottom',
-    action:{label:'Coba Mode Pilih', fn:function(){
-      var btn=document.getElementById('btn-select');
-      setMode('select',btn);
-    }}
+    action:null
   },
   {
     target:'#topbar',
-    title:'5️⃣ Load Contoh Topologi',
-    desc:'Bingung mulai dari mana? Klik tombol ★ BINTANG, ≡ BUS, ◯ RING, atau ⬡ MESH untuk langsung memuat contoh topologi lengkap yang sudah benar!',
+    title:'4️⃣ Panduan Contoh Topologi',
+    desc:'Bingung mulai dari mana? Klik tombol ★ BINTANG, ≡ BUS, ◯ RING, ⬡ MESH, atau ⬢ HYBRID untuk menampilkan panduan transparan di kanvas. Sebuah ikon "📘 Panduan" akan muncul di pojok kiri atas — klik ikon itu kapan saja untuk membuka/menutup panel berisi daftar perangkat & jenis kabel yang dibutuhkan, tanpa menghalangi kanvas. Kamu tetap harus membangunnya sendiri!',
     pos:'bottom',
-    action:{label:'Load Topologi Bintang', fn:function(){
+    action:{label:'Tampilkan Panduan Bintang', fn:function(){
       loadDemo('star');
     }}
   },
   {
     target:'#topbar .btn-sim',
-    title:'6️⃣ Simulasi & Validasi AI 🤖',
+    title:'5️⃣ Simulasi & Validasi AI 🤖',
     desc:'Setelah jaringan selesai dibuat, klik "▶▶ SIMULASI" untuk menganalisis topologi dengan AI. Hasilnya mencakup:\n• Skor kesehatan jaringan\n• Deteksi kabel yang salah\n• Peringatan SPOF & loop\n• Saran perbaikan',
     pos:'bottom',
     action:{label:'Coba Simulasi Sekarang', fn:function(){

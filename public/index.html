@@ -563,7 +563,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
   <span style="color:#007a3d;font-size:9px;font-weight:700;font-family:'Space Mono',monospace">● AI AKTIF</span>
   <div class="sep"></div>
   <button class="btn btn-tour" onclick="startTour()">? PANDUAN</button>
-  <button class="btn btn-sim" onclick="runSimulation()">▶▶ SIMULASI</button>
+  <button class="btn btn-sim" id="btn-sim" onclick="runSimulation()">▶▶ SIMULASI</button>
 </div>
 <div id="cable-bar">
   <span style="color:var(--black);font-size:9px;font-weight:700;font-family:'Space Mono',monospace;margin-right:2px;text-transform:uppercase">Kabel:</span>
@@ -1754,11 +1754,173 @@ function simItem(icon,title,desc,status){
   return '<div class="sim-item"><span class="sim-icon">'+icon+'</span><div class="sim-text"><strong>'+title+'</strong><span>'+desc+'</span></div></div>';
 }
 
+// ============================================================
+// PEMERIKSA KABEL — aturan pasti, dijalankan di browser (tidak memakai kuota AI)
+// Perangkat akhir = PC, Laptop, IP Phone. Server dipisah karena boleh memakai fiber.
+// ============================================================
+var DEV_NAMES={router:'Router',switch:'Switch',hub:'Hub',pc:'PC',server:'Server',laptop:'Laptop',cloud:'Cloud/ISP',phone:'IP Phone'};
+var CABLE_RULES={};
+function cableKind(t){ return (t==='pc'||t==='laptop'||t==='phone')?'end':t; }
+function addCableRule(k1,k2,ok,name,warn){
+  var r={ok:ok,name:name,warn:warn||[]};
+  CABLE_RULES[k1+'|'+k2]=r; CABLE_RULES[k2+'|'+k1]=r;
+}
+//             pasangan           kabel benar              nama pasangan
+addCableRule('end','switch',    ['straight'],            'Perangkat akhir ↔ Switch');
+addCableRule('server','switch', ['straight','fiber'],    'Server ↔ Switch');
+addCableRule('end','hub',       ['straight'],            'Perangkat akhir ↔ Hub');
+addCableRule('server','hub',    ['straight'],            'Server ↔ Hub');
+addCableRule('end','end',       ['cross'],               'Perangkat akhir ↔ perangkat akhir (langsung)');
+addCableRule('end','server',    ['cross'],               'Perangkat akhir ↔ Server (langsung)');
+addCableRule('server','server', ['cross'],               'Server ↔ Server (langsung)');
+addCableRule('end','router',    ['cross'],               'Perangkat akhir ↔ Router (langsung)');
+addCableRule('server','router', ['cross','fiber'],       'Server ↔ Router (langsung)');
+addCableRule('switch','switch', ['cross','fiber'],       'Switch ↔ Switch');
+addCableRule('switch','hub',    ['cross'],               'Switch ↔ Hub');
+addCableRule('hub','hub',       ['cross'],               'Hub ↔ Hub');
+addCableRule('switch','router', ['straight','fiber'],    'Switch ↔ Router');
+addCableRule('hub','router',    ['straight'],            'Hub ↔ Router');
+addCableRule('router','router', ['serial','cross','fiber'],'Router ↔ Router');
+addCableRule('router','cloud',  ['fiber','serial'],      'Router ↔ Cloud/ISP', ['straight']);
+
+function cableNames(list){ return list.map(function(c){return CABLE_NAMES[c]||c;}).join(' atau '); }
+
+function runCableCheck(){
+  var errors=[], warnings=[], seen={};
+  edges.forEach(function(e){
+    var a=nodes.find(function(n){return n.id===e.a});
+    var b=nodes.find(function(n){return n.id===e.b});
+    if(!a||!b) return;
+    var label=a.label+'('+a.type+') <--['+e.type+']--> '+b.label+'('+b.type+')';
+    var cn=CABLE_NAMES[e.type]||e.type;
+    function err(issue,suggestion){ errors.push({edge:label,issue:issue,suggestion:suggestion,edgeId:e.id}); }
+
+    if(a.id===b.id){ err('Kabel menghubungkan satu perangkat ke dirinya sendiri.','Hapus kabel ini'); return; }
+    var ka=cableKind(a.type), kb=cableKind(b.type);
+
+    // Console = jalur manajemen (bukan link data): hanya PC/Laptop ke Router/Switch
+    if(e.type==='console'){
+      var pcSide=function(t){return t==='pc'||t==='laptop';}, mgSide=function(t){return t==='router'||t==='switch';};
+      var okC=(pcSide(a.type)&&mgSide(b.type))||(pcSide(b.type)&&mgSide(a.type));
+      if(!okC) err('Kabel Console hanya untuk jalur manajemen dari PC/Laptop ke Router atau Switch.','Hubungkan Console dari PC/Laptop ke Router/Switch, atau pakai kabel data yang sesuai');
+      return;
+    }
+
+    // Dua kabel data di antara pasangan yang sama
+    var key=[a.id,b.id].sort().join('~');
+    seen[key]=(seen[key]||0)+1;
+    if(seen[key]===2) warnings.push({title:'Kabel ganda: '+a.label+' ↔ '+b.label,desc:'Ada lebih dari satu kabel data di antara dua perangkat ini. Pastikan memang disengaja (misalnya jalur cadangan).'});
+
+    var rule=CABLE_RULES[ka+'|'+kb];
+    if(!rule){
+      // Satu-satunya pasangan tanpa aturan = Cloud/ISP ke selain Router
+      var other=(ka==='cloud')?b:a;
+      err('Cloud/ISP harus terhubung lewat Router, tidak langsung ke '+DEV_NAMES[other.type]+'.','Hubungkan lewat Router');
+      return;
+    }
+    if(rule.ok.indexOf(e.type)>=0) return;
+    if(rule.warn.indexOf(e.type)>=0){
+      warnings.push({title:'Kabel '+cn+' ke Cloud/ISP',desc:'Handoff Ethernet dari ISP memang umum, tetapi untuk jalur ke ISP disarankan Fiber Optic atau Serial DCE.'});
+      return;
+    }
+    var issue;
+    if(e.type==='fiber'&&(ka==='end'||kb==='end'||ka==='hub'||kb==='hub')){
+      issue='Fiber tidak bisa dipakai di PC, Laptop, IP Phone, atau Hub karena perangkat ini umumnya tidak punya port fiber.';
+    } else if(e.type==='serial'){
+      issue='Serial DCE hanya untuk Router ↔ Router atau Router ↔ Cloud/ISP.';
+    } else {
+      issue='Untuk '+rule.name+', kabel '+cn+' tidak sesuai.';
+    }
+    err(issue,cableNames(rule.ok));
+  });
+  return {errors:errors,warnings:warnings};
+}
+
+// Gabungkan hasil AI (analisis topologi) dengan hasil pemeriksa kabel (pasti)
+function mergeCableCheck(ai,check){
+  var r=Object.assign({},ai);
+  r.cable_errors=check.errors;
+  r.warnings=check.warnings.concat(Array.isArray(ai.warnings)?ai.warnings:[]);
+  var s=Number(ai.health_score); if(isNaN(s)) s=100;
+  r.health_score=Math.max(0,Math.min(100,s-15*check.errors.length-5*check.warnings.length));
+  r.no_cables=(edges.length===0);
+  return r;
+}
+
+// AI gagal / kuota penuh: hasil pemeriksaan kabel tetap ditampilkan
+function showCableOnlyResult(title,msg){
+  var r=mergeCableCheck({topology_type:title,topology_desc:msg+' Pemeriksaan kabel tetap dijalankan oleh aplikasi.',health_score:100,isolated_nodes:[],warnings:[],ok_points:[],summary:''},runCableCheck());
+  r._cableOnly=true;
+  simHighlight={};
+  edges.forEach(function(e){e._error=false;});
+  applySimulationHighlights(r);
+  renderSimResult(r);
+}
+
+// ============================================================
+// COOLDOWN TOMBOL SIMULASI (hemat kuota API gratis)
+// ============================================================
+var SIM_COOLDOWN_MS=15000;      // jeda normal antar simulasi
+var SIM_COOLDOWN_429_MS=30000;  // jeda lebih lama kalau server bilang kuota AI penuh
+var simBusy=false;              // true selama menunggu jawaban AI
+var simCooldownUntil=0;
+var simCdTimer=null;
+var lastSimSig=null, lastSimResult=null;   // hasil terakhir: topologi yang sama tidak memanggil AI lagi
+try{ simCooldownUntil=parseInt(localStorage.getItem('netsim_sim_until')||'0',10)||0; }catch(_){}
+
+function setSimCooldown(ms){
+  simCooldownUntil=Date.now()+ms;
+  try{ localStorage.setItem('netsim_sim_until',String(simCooldownUntil)); }catch(_){}
+  tickSimCooldown();
+}
+function tickSimCooldown(){
+  var btn=document.getElementById('btn-sim');
+  if(!btn) return;
+  clearTimeout(simCdTimer);
+  if(simBusy){
+    btn.disabled=true;
+    btn.textContent='⏳ ANALISIS...';
+    simCdTimer=setTimeout(tickSimCooldown,250);
+    return;
+  }
+  var left=Math.ceil((simCooldownUntil-Date.now())/1000);
+  if(left>0){
+    btn.disabled=true;
+    btn.textContent='⏳ '+left+' DTK';
+    simCdTimer=setTimeout(tickSimCooldown,250);
+  } else {
+    btn.disabled=false;
+    btn.textContent='▶▶ SIMULASI';
+  }
+}
+tickSimCooldown(); // kalau halaman di-refresh saat masih cooldown, tombol tetap terkunci
+
 async function runSimulation(){
   if(nodes.length===0){
     alert('Tidak ada perangkat di kanvas!');
     return;
   }
+  if(simBusy) return;
+
+  // Topologi sama persis dengan simulasi terakhir? Tampilkan hasil tadi, tanpa memanggil AI & tanpa cooldown.
+  var topoSig=JSON.stringify(buildTopologyDescription());
+  if(topoSig===lastSimSig && lastSimResult){
+    openSimPanel();
+    simHighlight={};
+    edges.forEach(function(e){e._error=false;});
+    var cachedFinal=mergeCableCheck(lastSimResult,runCableCheck());
+    applySimulationHighlights(cachedFinal);
+    renderSimResult(cachedFinal);
+    return;
+  }
+
+  // Masih cooldown (mis. dipicu dari tour atau pintasan lain)
+  var cdLeft=Math.ceil((simCooldownUntil-Date.now())/1000);
+  if(cdLeft>0){
+    if(typeof showTip==='function') showTip('⏳ Tunggu '+cdLeft+' detik sebelum simulasi lagi.');
+    return;
+  }
+
   openSimPanel();
   setSimLoading('Menganalisis topologi jaringan...');
 
@@ -1768,6 +1930,10 @@ async function runSimulation(){
   draw();
 
   var topo=buildTopologyDescription();
+  var cableCheck=runCableCheck();
+  var cableLines=cableCheck.errors.map(function(x){return '- KABEL SALAH: '+x.edge+' → '+x.issue;})
+    .concat(cableCheck.warnings.map(function(x){return '- PERINGATAN KABEL: '+x.title;}));
+  var cableText=cableLines.length?cableLines.join('\n'):'Semua kabel sesuai aturan aplikasi.';
 
   var prompt = `Kamu adalah simulator dan validator topologi jaringan komputer. Analisis topologi berikut secara ketat dan akurat.
 
@@ -1779,30 +1945,17 @@ TOPOLOGI YANG DIANALISIS:
 ${topo.edgeList.map(function(e){return '  * '+e}).join('\n')}
 
 
-ATURAN KAMUS KABEL APLIKASI (PENTING):
-- Jika teks data koneksi tertulis "straight", artinya itu adalah kabel "Straight-through" yang VALID.
-- Jika teks data koneksi tertulis "cross", artinya itu adalah kabel "Crossover" yang VALID.
-- Jika teks data koneksi tertulis "serial", artinya itu adalah kabel "Serial DCE" yang VALID.
+PEMERIKSAAN KABEL SUDAH DILAKUKAN OLEH APLIKASI (JANGAN DINILAI ULANG):
+${cableText}
 
-ATURAN KABEL YANG KETAT (JANGAN masukkan ke cable_errors jika sudah sesuai Kamus di atas):
-- PC/Laptop/Server/Phone ke Switch atau Hub: WAJIB menggunakan kabel "straight". Jika bukan = ERROR.
-- PC/Laptop/Server ke PC/Laptop/Server langsung (tanpa switch): WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
-- Switch ke Switch langsung: WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
-- Router ke Switch atau Hub: WAJIB menggunakan kabel "straight". Jika bukan = ERROR.
-- Router ke Router langsung (WAN link): WAJIB menggunakan kabel "serial" atau "cross". Jika menggunakan "straight" = ERROR.
-- Router ke PC/Laptop/Server langsung (tanpa switch): WAJIB menggunakan kabel "cross". Jika bukan = ERROR.
-- Ke Cloud/ISP: Fiber direkomendasikan tapi bukan error fatal.
-- Console: untuk manajemen saja, bukan link data.
+TUGASMU:
+- JANGAN menilai benar atau salahnya jenis kabel. Itu sudah diperiksa aplikasi dengan aturan pasti. Selalu isi "cable_errors" dengan [] (kosong).
+- JANGAN menulis tentang jenis kabel di "warnings", "ok_points", maupun "summary" (termasuk kalimat seperti "semua kabel straight-through" atau "pengkabelan sudah benar").
+- JANGAN menyimpulkan bahwa topologi "sudah benar" atau "valid" secara keseluruhan. Nilai hanya struktur topologi.
+- Fokus pada: jenis topologi, node terisolasi, Single Point of Failure (SPOF), loop, redundansi, dan konektivitas keseluruhan.
+- Kabel "console" bukan link data. Abaikan kabel console saat menilai konektivitas, node terisolasi, SPOF, dan loop.
 
-ATURAN PENTING UNTUK cable_errors:
-- Ingat, nilai teks seperti "cross", "straight", dan "serial" adalah format resmi dan valid dari aplikasi. JANGAN PERNAH menganggap teks "cross" sebagai kesalahan dan jangan suruh user menggantinya ke "Crossover" karena itu adalah barang yang sama.
-- HANYA isi cable_errors jika kabel JELAS SALAH sesuai aturan pencocokan di atas.
-- Jika kabel sudah benar, jangan masukkan ke cable_errors sama sekali.
-
-
-
-SKOR KESEHATAN (mulai 100):
-- Kurangi 15 per cable_error nyata
+SKOR KESEHATAN (mulai 100), hanya dari masalah non-kabel (skor kabel dihitung aplikasi):
 - Kurangi 20 per isolated node
 - Kurangi 5-10 per warning serius (SPOF, loop, dll)
 - Tambah 5 jika ada redundansi
@@ -1813,9 +1966,7 @@ Balas HANYA dalam format JSON berikut, tanpa teks lain, tanpa backtick markdown:
   "topology_desc": "penjelasan singkat 1-2 kalimat",
   "health_score": 85,
   "isolated_nodes": [],
-  "cable_errors": [
-    {"edge": "LabelA(typeA) <--[cabletype]--> LabelB(typeB)", "issue": "mengapa ini salah", "suggestion": "kabel yang benar"}
-  ],
+  "cable_errors": [],
   "warnings": [
     {"title": "judul", "desc": "penjelasan"}
   ],
@@ -1825,6 +1976,8 @@ Balas HANYA dalam format JSON berikut, tanpa teks lain, tanpa backtick markdown:
   "summary": "ringkasan 1-2 kalimat"
 }`;
 
+  simBusy=true;
+  setSimCooldown(SIM_COOLDOWN_MS);
   try {
     setSimLoading('Menghubungi AI untuk analisis mendalam...');
 
@@ -1837,21 +1990,22 @@ Balas HANYA dalam format JSON berikut, tanpa teks lain, tanpa backtick markdown:
         body: JSON.stringify({ prompt: prompt })
       });
     } catch(netErr) {
-      setSimResult('<div class="sim-item"><span class="sim-icon">🌐</span><div class="sim-text"><strong>Gagal konek ke server</strong><span>Pastikan server Node.js sudah jalan.<br><small style="color:#888">Detail: '+netErr.message+'</small></span></div></div>');
+      showCableOnlyResult('Gagal terhubung ke server','Pastikan server sudah jalan ('+netErr.message+').');
       return;
     }
 
     var data = await response.json();
+    if(response.status===429) setSimCooldown(SIM_COOLDOWN_429_MS);
 
     if(!response.ok || data.error){
       var errMsg = data.error || ('HTTP '+response.status);
-      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Error dari server</strong><span>'+errMsg+'</span></div></div>');
+      showCableOnlyResult('Analisis AI tidak tersedia',errMsg);
       return;
     }
 
     var text = data.text || '';
     if(!text) {
-      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Respons AI kosong</strong><span>API terhubung tapi tidak ada jawaban. Coba lagi.</span></div></div>');
+      showCableOnlyResult('Respons AI kosong','API terhubung tapi tidak ada jawaban. Coba lagi.');
       return;
     }
 
@@ -1859,19 +2013,24 @@ Balas HANYA dalam format JSON berikut, tanpa teks lain, tanpa backtick markdown:
     var result;
     try { result = JSON.parse(text); }
     catch(parseErr){
-      setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Gagal membaca respons AI</strong><span>Format tidak valid. Coba lagi.</span></div></div>');
+      showCableOnlyResult('Gagal membaca respons AI','Format tidak valid. Coba lagi.');
       return;
     }
 
+    lastSimSig=topoSig; lastSimResult=result;
     setSimLoading('Memproses hasil simulasi...');
     await new Promise(function(r){setTimeout(r,300)});
 
-    applySimulationHighlights(result);
-    renderSimResult(result);
+    var finalResult=mergeCableCheck(result,cableCheck);
+    applySimulationHighlights(finalResult);
+    renderSimResult(finalResult);
 
   } catch(err){
     console.error(err);
     setSimResult('<div class="sim-item"><span class="sim-icon">⚠️</span><div class="sim-text"><strong>Error tidak terduga</strong><span>'+err.message+'<br><small style="color:#888">Buka F12 → Console untuk detail lengkap.</small></span></div></div>');
+  } finally {
+    simBusy=false;
+    tickSimCooldown();
   }
 }
 
@@ -1879,6 +2038,7 @@ function applySimulationHighlights(result){
   // Mark errored edges
   if(result.cable_errors && result.cable_errors.length>0){
     result.cable_errors.forEach(function(ce){
+      if(ce.edgeId){ edges.forEach(function(e){ if(e.id===ce.edgeId) e._error=true; }); return; }
       // Try to match edge by parsing labels
       var match=ce.edge.match(/^(.+?)\((.+?)\)\s*<--\[(.+?)\]-->\s*(.+?)\((.+?)\)$/);
       if(!match) return;
@@ -1903,6 +2063,11 @@ function applySimulationHighlights(result){
   // Mark nodes with warnings (nodes in cable_errors)
   if(result.cable_errors){
     result.cable_errors.forEach(function(ce){
+      if(ce.edgeId){
+        var ed=edges.find(function(e){return e.id===ce.edgeId});
+        if(ed) [ed.a,ed.b].forEach(function(id){ if(!simHighlight[id]) simHighlight[id]='warn'; });
+        return;
+      }
       var match=ce.edge.match(/^(.+?)\(.+?\)\s*<--\[.+?\]-->\s*(.+?)\(.+?\)$/);
       if(!match) return;
       [match[1].trim(),match[2].trim()].forEach(function(label){
@@ -1917,7 +2082,7 @@ function applySimulationHighlights(result){
 function renderSimResult(r){
   var score=r.health_score||0;
   var scoreClass=score>=80?'score-ok':score>=50?'score-warn':'score-err';
-  var statusBadge=score>=80?badge('ok','✓ SEHAT'):score>=50?badge('warn','⚠ PERBAIKI'):badge('err','✗ KRITIS');
+  var statusBadge=r._cableOnly?badge('warn','⚠ TANPA AI'):(score>=80?badge('ok','✓ SEHAT'):score>=50?badge('warn','⚠ PERBAIKI'):badge('err','✗ KRITIS'));
 
   var html='';
 
@@ -1946,7 +2111,8 @@ function renderSimResult(r){
     html+='</div></div>';
   } else {
     html+='<div class="sim-section"><div class="sim-section-title">🟢 Kabel</div><div class="sim-section-body">';
-    html+=simItem('✅','Semua kabel sudah benar','Tidak ada kesalahan jenis kabel','ok');
+    if(r.no_cables) html+=simItem('ℹ️','Belum ada kabel','Hubungkan perangkat dengan kabel agar bisa diperiksa','warn');
+    else html+=simItem('✅','Semua kabel sudah benar','Semua jenis kabel sesuai aturan pemeriksa kabel NetSim','ok');
     html+='</div></div>';
   }
 

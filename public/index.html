@@ -72,6 +72,8 @@ body{font-family:'Space Mono',monospace;font-size:12px;background:var(--white);c
   transition:transform .1s,box-shadow .1s;
   text-transform:uppercase;
 }
+
+
 .btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--black)}
 .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--black)}
 .btn.on{background:var(--cyan);color:var(--black);border-color:var(--black)}
@@ -544,6 +546,15 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
   #tour-card .tour-btns button{padding:6px 10px;white-space:nowrap}
 }
 
+/* ============ TOMBOL PERANGKAT LEBIH KECIL DI HP ============ */
+@media (max-width:720px),(max-height:480px){
+  .dev-btn{width:52px;padding:4px 1px;font-size:8px}
+  .dev-btn canvas{width:36px;height:26px;margin-bottom:2px}
+}
+@media (max-width:720px){
+  #sidebar{padding:5px 8px 7px;gap:6px}
+}
+
 @keyframes none{}
 </style>
 </head>
@@ -567,7 +578,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
 </div>
 <div id="cable-bar">
   <span style="color:var(--black);font-size:9px;font-weight:700;font-family:'Space Mono',monospace;margin-right:2px;text-transform:uppercase">Kabel:</span>
-  <div class="ctype on" id="ct-straight" onclick="setCable('straight',this)">
+  <div class="ctype" id="ct-straight" onclick="setCable('straight',this)">
     <div class="cline" style="background:#4fc3f7"></div> Straight-through
   </div>
   <div class="ctype" id="ct-cross" onclick="setCable('cross',this)">
@@ -587,7 +598,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
 <div id="sidebar">
   <div style="font-size:9px;color:var(--black);font-weight:700;font-family:'Space Mono',monospace;margin-bottom:4px;text-transform:uppercase">Device</div>
   <div class="dev-btn" id="d-router" onclick="pickDev('router',this)">
-    <canvas width="44" height="32" id="ic-router"></canvas>Router
+    <canvas width="44" height="34" id="ic-router"></canvas>Router
   </div>
   <div class="dev-btn" id="d-switch" onclick="pickDev('switch',this)">
     <canvas width="44" height="32" id="ic-switch"></canvas>Switch
@@ -599,7 +610,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
     <canvas width="44" height="32" id="ic-pc"></canvas>PC
   </div>
   <div class="dev-btn" id="d-server" onclick="pickDev('server',this)">
-    <canvas width="44" height="32" id="ic-server"></canvas>Server
+    <canvas width="40" height="34" id="ic-server"></canvas>Server
   </div>
   <div class="dev-btn" id="d-laptop" onclick="pickDev('laptop',this)">
     <canvas width="44" height="32" id="ic-laptop"></canvas>Laptop
@@ -608,7 +619,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
     <canvas width="44" height="32" id="ic-cloud"></canvas>Cloud/ISP
   </div>
   <div class="dev-btn" id="d-phone" onclick="pickDev('phone',this)">
-    <canvas width="44" height="32" id="ic-phone"></canvas>IP Phone
+    <canvas width="44" height="32" id="ic-phone"></canvas>Phone
   </div>
 </div>
 <div id="canvas-wrap">
@@ -650,7 +661,7 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
 </div>
 <div id="info-bar">
   <span id="info-mode">Mode: Kabel</span>
-  <span id="info-cable">Kabel: Straight-through</span>
+  <span id="info-cable">Kabel: belum dipilih</span>
   <span id="info-nodes">Nodes: 0</span>
   <span id="info-edges">Koneksi: 0</span>
   <span id="info-tip">Klik sidebar untuk tambah perangkat, klik 2 perangkat untuk hubungkan, atau klik objek untuk memilihnya</span>
@@ -666,7 +677,7 @@ var ctx=cv.getContext('2d');
 var tooltip=document.getElementById('tooltip');
 
 var nodes=[],edges=[],sel=null,linkFrom=null;
-var mode='cable',cableType='straight';
+var mode='cable',cableType=null; // null = belum ada jenis kabel yang dipilih
 var dragNode=null,dragSX=0,dragSY=0,nSX=0,nSY=0,didMove=false;
 var dragEdgeHandle=null; // {edge,end:'a'|'b',curX,curY} — dragging a cable endpoint to another device
 var devType=null;
@@ -863,6 +874,13 @@ function handleAt(edge,x,y){
   return null;
 }
 function handleCableTap(hitNode){
+  if(!cableType){
+    linkFrom=null;
+    document.getElementById('info-tip').textContent='Pilih jenis kabel dulu di bar atas (STRAIGHT-THROUGH, CROSSOVER, dst).';
+    if(typeof showTip==='function') showTip('👆 Pilih jenis kabel dulu di bar merah muda di atas.');
+    draw();
+    return;
+  }
   if(!linkFrom){
     linkFrom=hitNode;
     document.getElementById('info-tip').textContent='Dari '+hitNode.label+' — klik perangkat tujuan';
@@ -1417,8 +1435,14 @@ function drawSidebarIcons(){
     var ic=document.getElementById('ic-'+k);
     if(!ic)return;
     var c=ic.getContext('2d');
-    c.clearRect(0,0,44,32);
-    c.save();c.translate(22,16);
+    c.clearRect(0,0,44,34);
+    c.save();
+    if(k==='router'){
+      c.translate(22,19);   // turunin titik tengah
+      c.scale(0.9,0.9);     // kecilin dikit biar muat
+    } else {
+      c.translate(22,16);
+    }
     map[k](c);
     c.restore();
   });

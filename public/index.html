@@ -555,6 +555,13 @@ canvas#c{position:absolute;top:0;left:0;z-index:1;display:block;touch-action:non
   #sidebar{padding:5px 8px 7px;gap:6px}
 }
 
+@media (min-width:721px) and (min-height:481px){
+  #sidebar{width:65px;gap:4px}          /* 80 → 68 */
+  .dev-btn{width:50px;padding:4px 2px;font-size:7px}  /* 66 → 56, 9px → 7.7px */
+  .dev-btn canvas{width:30px;height:auto;margin-bottom:3px}  /* 44 → 37 */
+  #ic-server{width:30px}                /* canvas server aslinya 40px */
+}
+
 @keyframes none{}
 </style>
 </head>
